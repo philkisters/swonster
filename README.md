@@ -1,15 +1,52 @@
+<p align="center">
+  <img src="public/logo.png" alt="Swonster logo" width="220">
+</p>
+
 # Swonster
 
-Ein browserbasiertes Monster-Merge-Spiel mit Nuxt, Vue und TypeScript.
+**Swonster** is a browser-based monster survival game inspired by 2048. Merge
+matching monsters to make them stronger, battle an ever-growing enemy threat,
+and chase a new high score. The challenge is to keep your monsters alive and
+survive for as many turns as possible.
 
-## Entwicklung
+## Core idea
+
+Move all monsters on the board at once by using the arrow keys, WASD, or touch
+gestures. When two monsters of the same type and tier collide, they merge into
+a stronger monster with higher health and attack power.
+
+Position matters: monsters attack adjacent opponents in the direction of
+movement, and surviving defenders can counterattack. Every valid move adds a
+new monster to the board, while the spawn preview lets you plan for what is
+coming next.
+
+The run ends when no friendly monsters remain or there is no room left for the
+next spawn.
+
+## Increasing pressure
+
+- Merge friendly monsters to build a stronger team.
+- Enemy difficulty increases over time as stronger enemy tiers become more
+  likely to spawn.
+- Stronger enemies are more dangerous and yield greater point and XP rewards.
+- Defeating enemies and merging friendly monsters adds to your score.
+- The goal is to set the highest score and survive the most turns.
+
+## Getting started
+
+Install dependencies:
 
 ```bash
 pnpm install
+```
+
+Start the development server:
+
+```bash
 pnpm dev
 ```
 
-## Tests und Prüfung
+## Quality checks
 
 ```bash
 pnpm test
@@ -18,27 +55,26 @@ pnpm typecheck
 pnpm build
 ```
 
-## GitHub Pages
+## Project structure
 
-GitHub Pages is deployed from the default branch by
-`.github/workflows/deploy-pages.yml`. In the repository settings, set **Pages**
-to use **GitHub Actions** as its source. The generated static files can also be
-built locally with `pnpm generate`.
+- `app/` — Nuxt/Vue user interface, input handling, and game presentation
+- `game/` — pure TypeScript game rules for movement, merging, combat, and
+  spawning
+- `public/` — logo, monster sprites, icons, and other static assets
+- `tests/` — unit tests for the game engine and its rules
 
-## Phase 1
+## Static deployment
 
-Das 5×5-Board startet mit fest platzierten verbündeten Monstern und Gegnern. Beim Laden erklärt ein Tutorial Bewegung, Angriffe, Konter und die Spawn-Vorschau; nach Bestätigung können alle beweglichen Monster mit Pfeiltasten, WASD oder einer Wischbewegung bewegt werden. Gleiche Monster derselben Fraktion und Stufe verschmelzen beim Schieben; Gegner und unbewegliche Monster blockieren den Weg. Die Spielregeln liegen als reine TypeScript-Funktionen im Ordner `game/`.
+Create a production-ready static site with:
 
-## Phase 3
+```bash
+pnpm generate
+```
 
-Nach Bewegung und Verschmelzen greifen Monster das gegnerische Monster im direkt angrenzenden Feld in Zugrichtung an. Aktive Angriffe werden gleichzeitig verrechnet; überlebende, beschädigte Verteidiger kontern, sofern sie nicht selbst angegriffen haben. Ein besiegter Gegner der Stufe 1 gewährt 5 Score, 1 Gold und 2 XP; der Score verdreifacht sich pro weiterer Stufe, Gold und XP bleiben gleich. Das Verschmelzen zweier verbündeter Monster der Stufe 1 gewährt 3 Score; dieser Wert verdoppelt sich pro weiterer Stufe der Ausgangsmonster. Gegnerverschmelzungen gewähren keinen Score. Die Werte sind konfigurierbar in `game/config.ts`.
+GitHub Pages deployment is configured in
+`.github/workflows/deploy-pages.yml`. In the repository settings, set
+**Pages** to use **GitHub Actions** as its source.
 
-## Phase 4
+## License
 
-Die Vorschau zeigt zehn deterministische Spawns pro Lauf. Nach jedem gültigen Zug wird, sofern ein Feld frei ist, genau der erste Eintrag gespawnt und die Vorschau um einen Eintrag weitergeschoben; ungültige Züge ändern sie nicht. Der Zufall wird mit einem Run-Seed initialisiert und für reproduzierbare Tests kontrolliert.
-
-Freundliche Monster erscheinen immer auf Stufe 1, mit einer Wahrscheinlichkeit von 30 %. Gegner erscheinen zunächst ebenfalls auf Stufe 1. Sobald erstmals zwei verbündete Monster zu einem Monster der Stufe 3 verschmolzen sind, wachsen die Wahrscheinlichkeiten für Gegner der Stufen 2, 3 und 4 pro gültigem Zug um 0,3, 0,15 beziehungsweise 0,05 Prozentpunkte, bis maximal 30 %, 20 % beziehungsweise 10 % erreicht sind. Die restliche Wahrscheinlichkeit entfällt auf Stufe 1. Bereits angezeigte Einträge bleiben unverändert; die Entwicklung gilt für neu hinzugefügte Vorschau-Einträge. Die Werte und Monstertypen sind in `game/config.ts` konfigurierbar; Boss-Spawns sind noch nicht Teil der Standardverteilung. Monster erscheinen in einem zufällig ausgewählten freien Feld. Die Platzierung verwendet denselben Run-Seed und ist deshalb reproduzierbar.
-
-## Phase 5
-
-Das Spiel endet, wenn nach einem gültigen Zug für den nächsten Spawn kein Feld frei ist oder nach dem Spawn keine verbündeten Monster mehr übrig sind. Ein freundlicher Spawn kann den Verlust des letzten Verbündeten ausgleichen. Ein Spawn, der das letzte freie Feld belegt, beendet das Spiel nicht allein deshalb: Ein späterer Zug kann wieder Platz schaffen. Ungültige Züge versuchen keinen Spawn und lösen daher kein Game-over aus. Nach dem Spielende zeigt eine Einblendung über dem Spielfeld den Score. Bei vollem Spielfeld oder nach dem Spielende kann mit „Neues Spiel“ der Startzustand samt Spawn-Vorschau zurückgesetzt werden.
+See [LICENSE](LICENSE).
