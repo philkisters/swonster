@@ -240,7 +240,7 @@ input {
 
 .game-shell {
   display: grid;
-  width: min(100%, 34rem, max(16rem, calc(100dvh - 22rem)));
+  width: min(100%, 34rem, max(16rem, calc(100dvh - 23rem)));
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(1rem, 3vw, 2rem);
 }
