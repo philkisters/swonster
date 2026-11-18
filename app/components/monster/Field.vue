@@ -141,8 +141,8 @@ function withBaseURL(path: string): string {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
   transform: translate(-50%, -50%);
   opacity: 0.85;
   pointer-events: none;
@@ -156,5 +156,20 @@ function withBaseURL(path: string): string {
 .monster-badge-label {
   font-size: 0.42rem;
   letter-spacing: 0.02em;
+}
+
+@media (min-width: 512px) {
+  .monster-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+
+
+@media (min-width: 768px) {
+  .monster-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
 }
 </style>
