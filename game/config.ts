@@ -72,7 +72,7 @@ export function getMonsterDefinition(typeId: string): MonsterTypeDefinition {
   return definition
 }
 
-export function getMonsterSprite(typeId: string, tier: number): string {
+function getMonsterSpriteFile(typeId: string, tier: number): string {
   if (!Number.isInteger(tier) || tier < 1) {
     throw new Error(`Invalid monster tier: ${tier}`)
   }
@@ -80,7 +80,16 @@ export function getMonsterSprite(typeId: string, tier: number): string {
   const definition = getMonsterDefinition(typeId)
   const spriteLevel = Math.min(tier, MAX_MONSTER_SPRITE_LEVEL)
 
-  return `/sprites/${definition.spritePrefix}-level-${spriteLevel}.png`
+  return `${definition.spritePrefix}-level-${spriteLevel}.png`
+}
+
+export function getMonsterSprite(typeId: string, tier: number): string {
+  return `/sprites/${getMonsterSpriteFile(typeId, tier)}`
+}
+
+/** Returns the square head portrait matching the full sprite of a monster. */
+export function getMonsterHeadSprite(typeId: string, tier: number): string {
+  return `/sprites/heads/${getMonsterSpriteFile(typeId, tier)}`
 }
 
 export function getMonsterStats(typeId: string, tier: number): { maxHp: number, atk: number } {

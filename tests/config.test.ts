@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getMonsterSprite } from '../game/config'
+import { getMonsterHeadSprite, getMonsterSprite } from '../game/config'
 
 describe('monster sprites', () => {
   it.each([
@@ -20,5 +20,11 @@ describe('monster sprites', () => {
 
   it.each([0, -1, 1.5, Number.NaN])('rejects invalid level %s', (tier) => {
     expect(() => getMonsterSprite('dragon', tier)).toThrow('Invalid monster tier')
+    expect(() => getMonsterHeadSprite('dragon', tier)).toThrow('Invalid monster tier')
+  })
+
+  it('uses the head portrait matching the full sprite', () => {
+    expect(getMonsterHeadSprite('griffin', 3)).toBe('/sprites/heads/griffin-level-3.png')
+    expect(getMonsterHeadSprite('skeletDragon', 20)).toBe('/sprites/heads/skeleton-dragon-level-10.png')
   })
 })
