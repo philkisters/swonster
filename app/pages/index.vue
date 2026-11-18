@@ -1,67 +1,3 @@
-<script setup lang="ts">
-import { computed, ref } from 'vue'
-import GameBoard from '../components/game/GameBoard.vue'
-import GameHeader from '../components/game/GameHeader.vue'
-import SpawnTimeline from '../components/game/SpawnTimeline.vue'
-import { useGame } from '../composables/useGame'
-import { useGameInput } from '../composables/useGameInput'
-import type { Direction } from '../../game/types'
-
-const tutorialSteps = [
-  {
-    icon: '↑ ↓ ← →',
-    title: 'How to move',
-    description: 'Use the arrow keys or WASD, or swipe on the board. All movable monsters slide in the chosen direction.'
-  },
-  {
-    icon: '⚔',
-    title: 'Attack',
-    description: 'Move towards an enemy to attack. Monsters attack opposing monsters next to them in the direction of movement.'
-  },
-  {
-    icon: '↩',
-    title: 'Counterattack',
-    description: 'A monster that survives an attack strikes back if it did not already attack that turn.'
-  },
-  {
-    icon: '● ● ●',
-    title: 'Upcoming spawns',
-    description: 'The timeline shows the next monsters to spawn. After each valid move, the first appears if there is room on the board.'
-  }
-]
-const tutorialStep = ref(0)
-const showTutorial = ref(true)
-const currentTutorialStep = computed(() => {
-  const step = tutorialSteps[tutorialStep.value]
-  if (!step) throw new Error('Invalid tutorial step')
-  return step
-})
-const {
-  state,
-  attackAnimations,
-  mergeAnimations,
-  move,
-  restart,
-  finishMergeAnimations,
-  finishAttackAnimations,
-  finishSpawnAnimation
-} = useGame()
-
-function moveWhenReady(direction: Direction) {
-  if (!showTutorial.value) move(direction)
-}
-
-function advanceTutorial() {
-  if (tutorialStep.value < tutorialSteps.length - 1) {
-    tutorialStep.value++
-  } else {
-    showTutorial.value = false
-  }
-}
-
-useGameInput(moveWhenReady)
-</script>
-
 <template>
   <main class="game-page">
     <div class="game-shell">
@@ -77,7 +13,7 @@ useGameInput(moveWhenReady)
         aria-label="Game"
       >
         <div class="game-board-column">
-          <SpawnTimeline :queue="state.spawnQueue" />
+          <GameSpawnTimeline :queue="state.spawnQueue" />
 
           <div class="game-board-wrapper">
             <GameBoard
@@ -89,44 +25,7 @@ useGameInput(moveWhenReady)
               @spawn-animation-done="finishSpawnAnimation"
               @move="moveWhenReady"
             />
-            <section
-              v-if="showTutorial"
-              class="game-tutorial-overlay"
-              aria-labelledby="tutorial-title"
-            >
-              <div
-                class="game-tutorial-content"
-                aria-live="polite"
-                aria-atomic="true"
-              >
-                <span class="game-tutorial-progress">Step {{ tutorialStep + 1 }} of {{ tutorialSteps.length }}</span>
-                <span
-                  class="game-tutorial-icon"
-                  aria-hidden="true"
-                >{{ currentTutorialStep.icon }}</span>
-                <h2 id="tutorial-title">
-                  {{ currentTutorialStep.title }}
-                </h2>
-                <p>{{ currentTutorialStep.description }}</p>
-              </div>
-              <div class="game-tutorial-actions">
-                <button
-                  v-if="tutorialStep > 0"
-                  type="button"
-                  class="game-tutorial-back"
-                  @click="tutorialStep--"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  class="game-over-restart"
-                  @click="advanceTutorial"
-                >
-                  {{ tutorialStep < tutorialSteps.length - 1 ? 'Next' : 'I understand' }}
-                </button>
-              </div>
-            </section>
+            <GameTutorial v-if="showTutorial" @close="showTutorial = false" />
             <section
               v-if="state.gameOver"
               class="game-over-overlay"
@@ -177,6 +76,29 @@ useGameInput(moveWhenReady)
     </div>
   </main>
 </template>
+
+<script setup lang="ts">
+import type { Direction } from '../../game/types'
+
+const showTutorial = ref(true)
+
+const {
+  state,
+  attackAnimations,
+  mergeAnimations,
+  move,
+  restart,
+  finishMergeAnimations,
+  finishAttackAnimations,
+  finishSpawnAnimation
+} = useGame()
+
+function moveWhenReady(direction: Direction) {
+  if (!showTutorial.value) move(direction)
+}
+
+useGameInput(moveWhenReady)
+</script>
 
 <style>
 :root {
@@ -261,71 +183,6 @@ input {
   font-size: 0.72rem;
   font-weight: 850;
   letter-spacing: 0.16em;
-}
-
-.game-tutorial-overlay {
-  position: absolute;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.65rem;
-  padding: 1rem;
-  border: 1px solid var(--ui-border-accented);
-  border-radius: 1.5rem;
-  background: var(--ui-bg);
-  inset: 0;
-  text-align: center;
-}
-
-.game-tutorial-content {
-  display: grid;
-  justify-items: center;
-  gap: 0.5rem;
-}
-
-.game-tutorial-progress {
-  color: var(--ui-text-muted);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.game-tutorial-icon {
-  color: var(--game-accent-text);
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
-  font-weight: 800;
-  letter-spacing: 0.1em;
-}
-
-.game-tutorial-overlay h2 {
-  margin: 0;
-  font-size: clamp(1.3rem, 4vw, 1.8rem);
-  font-weight: 850;
-}
-
-.game-tutorial-overlay p {
-  max-width: 22rem;
-  margin: 0;
-  color: var(--ui-text-muted);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-
-.game-tutorial-actions {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.game-tutorial-back {
-  padding: 0.65rem 0.9rem;
-  border: 1px solid var(--ui-border);
-  border-radius: 0.7rem;
-  background: var(--ui-bg-elevated);
-  color: var(--ui-text);
-  font-weight: 750;
-  cursor: pointer;
 }
 
 .game-over-overlay {

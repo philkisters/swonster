@@ -1,7 +1,7 @@
 import { onScopeDispose, readonly, ref } from 'vue'
-import { createInitialState } from '../../game/initialState'
-import { executeTurn } from '../../game/engine'
-import type { Direction, GameEvent, GameState } from '../../game/types'
+import { createInitialState } from '~~/game/initialState'
+import { executeTurn } from '~~/game/engine'
+import type { Direction, GameEvent, GameState } from '~~/game/types'
 
 interface AttackAnimation {
   monsterId: string

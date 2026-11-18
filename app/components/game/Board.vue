@@ -1,8 +1,47 @@
+<template>
+  <div
+    class="game-board"
+    role="grid"
+    :aria-label="`${state.width} by ${state.height} monster game board`"
+    :style="{ '--board-width': state.width, '--board-height': state.height }"
+    @pointerdown="onPointerDown"
+    @pointerup="onPointerUp"
+    @pointercancel="onPointerCancel"
+  >
+    <div
+      v-for="(monster, index) in state.cells"
+      :key="getAttackAnimation(monster)
+        ? `${index}-${monster?.id}-${getAttackAnimation(monster)?.phase}-${state.turn}`
+        : monster?.id === `spawn-${state.turn}` || monster?.id.startsWith(`merge-${state.turn}-`)
+          ? `${index}-${monster.id}` : index"
+      class="board-cell"
+      :class="{
+        'board-cell--player': monster?.faction === 'player',
+        'board-cell--enemy': monster?.faction === 'enemy',
+        'board-cell--spawned': monster?.id === `spawn-${state.turn}`,
+        'board-cell--merged': monster && mergedMonsterIds.has(monster.id),
+        'board-cell--attacking': getAttackAnimation(monster) !== undefined,
+        'board-cell--countering': getAttackAnimation(monster)?.phase === 'counter',
+        'board-cell--attack-up': getAttackAnimation(monster)?.direction === 'up',
+        'board-cell--attack-down': getAttackAnimation(monster)?.direction === 'down',
+        'board-cell--attack-left': getAttackAnimation(monster)?.direction === 'left',
+        'board-cell--attack-right': getAttackAnimation(monster)?.direction === 'right'
+      }"
+      role="gridcell"
+      :aria-label="monster
+        ? `${getMonsterDefinition(monster.typeId).name}, ${monster.faction === 'player' ? 'Ally' : 'Enemy'}, tier ${monster.tier}, HP ${monster.hp} of ${monster.maxHp}, attack ${monster.atk}`
+        : 'Empty'"
+      @animationend="onAnimationEnd($event, monster)"
+    >
+      <MonsterField v-if="monster" :monster="monster" />
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { getMonsterDefinition, getMonsterSprite } from '../../../game/config'
-import { getDirectionFromSwipe } from '../../../game/input'
-import type { Direction, Monster } from '../../../game/types'
+import { getMonsterDefinition } from '~~/game/config'
+import { getDirectionFromSwipe } from '~~/game/input'
+import type { Direction, Monster } from '~~/game/types'
 
 interface BoardState {
   width: number
@@ -36,7 +75,6 @@ const completedAttackers = new Set<string>()
 const completedMerges = new Set<string>()
 const mergedMonsterIds = computed(() => new Set(props.mergeAnimations))
 const pointerStart = ref<{ id: number, x: number, y: number } | null>(null)
-const { app } = useRuntimeConfig()
 
 watch(
   () => `${props.state.turn}:${props.attackAnimations.map(({ monsterId, phase }) => `${phase}-${monsterId}`).join('|')}`,
@@ -47,10 +85,6 @@ watch(() => props.state.turn, () => completedMerges.clear())
 
 function getAttackAnimation(monster: Monster | null): AttackAnimation | undefined {
   return monster ? attackAnimationsByMonster.value.get(monster.id) : undefined
-}
-
-function withBaseURL(path: string): string {
-  return `${app.baseURL}${path.replace(/^\//, '')}`
 }
 
 function onPointerDown(event: PointerEvent) {
@@ -112,73 +146,6 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   }
 }
 </script>
-
-<template>
-  <div
-    class="game-board"
-    role="grid"
-    :aria-label="`${state.width} by ${state.height} monster game board`"
-    :style="{ '--board-width': state.width, '--board-height': state.height }"
-    @pointerdown="onPointerDown"
-    @pointerup="onPointerUp"
-    @pointercancel="onPointerCancel"
-  >
-    <div
-      v-for="(monster, index) in state.cells"
-      :key="getAttackAnimation(monster)
-        ? `${index}-${monster?.id}-${getAttackAnimation(monster)?.phase}-${state.turn}`
-        : monster?.id === `spawn-${state.turn}` || monster?.id.startsWith(`merge-${state.turn}-`)
-          ? `${index}-${monster.id}` : index"
-      class="board-cell"
-      :class="{
-        'board-cell--player': monster?.faction === 'player',
-        'board-cell--enemy': monster?.faction === 'enemy',
-        'board-cell--spawned': monster?.id === `spawn-${state.turn}`,
-        'board-cell--merged': monster && mergedMonsterIds.has(monster.id),
-        'board-cell--attacking': getAttackAnimation(monster) !== undefined,
-        'board-cell--countering': getAttackAnimation(monster)?.phase === 'counter',
-        'board-cell--attack-up': getAttackAnimation(monster)?.direction === 'up',
-        'board-cell--attack-down': getAttackAnimation(monster)?.direction === 'down',
-        'board-cell--attack-left': getAttackAnimation(monster)?.direction === 'left',
-        'board-cell--attack-right': getAttackAnimation(monster)?.direction === 'right'
-      }"
-      role="gridcell"
-      :aria-label="monster
-        ? `${getMonsterDefinition(monster.typeId).name}, ${monster.faction === 'player' ? 'Ally' : 'Enemy'}, tier ${monster.tier}, HP ${monster.hp} of ${monster.maxHp}, attack ${monster.atk}`
-        : 'Empty'"
-      @animationend="onAnimationEnd($event, monster)"
-    >
-      <template v-if="monster">
-        <img
-          class="monster-sprite"
-          :src="withBaseURL(getMonsterSprite(monster.typeId, monster.tier))"
-          alt=""
-          aria-hidden="true"
-          draggable="false"
-        >
-        <div class="monster-name">
-          <span>Lvl. {{ monster.tier }}</span>
-        </div>
-        <div class="monster-stats">
-          <span class="monster-stat monster-stat--hp">HP {{ monster.hp }}</span>
-          <span class="monster-stat monster-stat--attack">ATK {{ monster.atk }}</span>
-        </div>
-        <div
-          class="monster-tooltip"
-          aria-hidden="true"
-        >
-          <span>{{ getMonsterDefinition(monster.typeId).name }}</span>
-          <span>HP {{ monster.hp }} / {{ monster.maxHp }}</span>
-        </div>
-      </template>
-      <span
-        v-else
-        class="empty-mark"
-        aria-hidden="true"
-      >·</span>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 .game-board {
@@ -270,91 +237,10 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   --attack-y: 0;
 }
 
-.monster-sprite {
-  width: clamp(2.5rem, 10vw, 4.5rem);
-  max-width: 65%;
-  height: clamp(2.5rem, 10vw, 4.5rem);
-  max-height: 65%;
-  object-fit: contain;
-  pointer-events: none;
-}
-
-.monster-name {
-  max-width: 100%;
-  overflow: hidden;
-  font-size: clamp(0.55rem, 1.9vw, 0.75rem);
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.monster-stats {
-  position: absolute;
-  right: 0.2rem;
-  bottom: 0.2rem;
-  left: 0.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.1rem;
-}
-
-.monster-stat {
-  min-width: 0;
-  padding: 0.12rem 0.22rem;
-  border-radius: 999px;
-  font-size: clamp(0.42rem, 1.25vw, 0.56rem);
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 2;
-  white-space: nowrap;
-}
-
-.monster-stat--hp {
-  background: color-mix(in srgb, var(--ui-color-success-500) 20%, var(--ui-bg-elevated));
-  color: var(--game-accent-text);
-}
-
-.monster-stat--attack {
-  background: var(--ui-bg-accented);
-  color: var(--ui-text-toned);
-}
-
-.monster-tooltip {
-  position: absolute;
-  bottom: calc(100% + 0.35rem);
-  left: 50%;
-  z-index: 2;
-  display: flex;
-  width: max-content;
-  max-width: min(12rem, 80vw);
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.4rem 0.6rem;
-  transform: translate(-50%, 0.25rem);
-  border: 1px solid var(--ui-border-inverted);
-  border-radius: 0.55rem;
-  background: var(--ui-bg-inverted);
-  box-shadow: 0 0.4rem 1rem rgb(20 30 20 / 25%);
-  color: var(--ui-text-inverted);
-  font-size: 0.68rem;
-  line-height: 1.2;
-  opacity: 0;
-  pointer-events: none;
-  text-align: center;
-  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms;
-  visibility: hidden;
-}
-
 .board-cell:hover .monster-tooltip {
   transform: translate(-50%, 0);
   opacity: 1;
   visibility: visible;
-}
-
-.empty-mark {
-  color: var(--ui-text-dimmed);
-  font-size: 1.5rem;
 }
 
 @media (max-width: 480px) {

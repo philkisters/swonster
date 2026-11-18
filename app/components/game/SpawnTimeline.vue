@@ -1,9 +1,3 @@
-<script setup lang="ts">
-import type { SpawnEntry } from '../../../game/types'
-
-defineProps<{ queue: readonly SpawnEntry[] }>()
-</script>
-
 <template>
   <section
     class="spawn-preview"
@@ -29,6 +23,12 @@ defineProps<{ queue: readonly SpawnEntry[] }>()
     </ol>
   </section>
 </template>
+
+<script setup lang="ts">
+import type { SpawnEntry } from '~~/game/types'
+
+defineProps<{ queue: readonly SpawnEntry[] }>()
+</script>
 
 <style scoped>
 .spawn-preview {

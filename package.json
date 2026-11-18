@@ -10,6 +10,8 @@
     "postinstall": "nuxt prepare",
     "test": "vitest run",
     "lint": "eslint .",
+    "format": "eslint . --fix && prettier --write .",
+    "format:check": "eslint . && prettier --check .",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
@@ -22,7 +24,10 @@
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",
     "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-better-tailwindcss": "^4.10.0",
+    "prettier": "^3.10.1",
+    "prettier-plugin-tailwindcss": "^0.8.1",
     "typescript": "^6.0.3",
     "vitest": "^5.1.0",
     "vue-tsc": "^3.3.13"

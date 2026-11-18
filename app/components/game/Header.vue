@@ -1,23 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-
-const props = defineProps<{
-  turn: number
-  score: number
-  gold: number
-  xp: number
-}>()
-
-const { app } = useRuntimeConfig()
-
-const counters = computed(() => [
-  { key: 'turn', class: 'game-counter--turn', label: 'Turn', value: props.turn },
-  { key: 'score', class: 'game-counter--score', label: 'Score', value: props.score },
-  { key: 'gold', class: 'game-counter--gold', label: 'Gold', value: props.gold },
-  { key: 'xp', class: 'game-counter--xp', label: 'XP', value: props.xp }
-])
-</script>
-
 <template>
   <header class="game-header">
     <h1 class="game-header-brand">
@@ -55,6 +35,24 @@ const counters = computed(() => [
     </div>
   </header>
 </template>
+
+<script setup lang="ts">
+const props = defineProps<{
+  turn: number
+  score: number
+  gold: number
+  xp: number
+}>()
+
+const { app } = useRuntimeConfig()
+
+const counters = computed(() => [
+  { key: 'turn', class: 'game-counter--turn', label: 'Turn', value: props.turn },
+  { key: 'score', class: 'game-counter--score', label: 'Score', value: props.score },
+  { key: 'gold', class: 'game-counter--gold', label: 'Gold', value: props.gold },
+  { key: 'xp', class: 'game-counter--xp', label: 'XP', value: props.xp }
+])
+</script>
 
 <style scoped>
 .game-header {

@@ -51,9 +51,12 @@ pnpm dev
 ```bash
 pnpm test
 pnpm lint
+pnpm format:check
 pnpm typecheck
 pnpm build
 ```
+
+Run `pnpm format` to apply formatting.
 
 ## Project structure
 

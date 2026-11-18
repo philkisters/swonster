@@ -1,3 +1,9 @@
+<template>
+  <UApp>
+    <NuxtPage />
+  </UApp>
+</template>
+
 <script setup lang="ts">
 const { app } = useRuntimeConfig()
 
@@ -44,9 +50,3 @@ useSeoMeta({
   twitterImageAlt: 'Swonster dragon logo'
 })
 </script>
-
-<template>
-  <UApp>
-    <NuxtPage />
-  </UApp>
-</template>

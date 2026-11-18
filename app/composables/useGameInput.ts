@@ -1,6 +1,5 @@
-import { onBeforeUnmount, onMounted } from 'vue'
-import { getDirectionFromKey } from '../../game/input'
-import type { Direction } from '../../game/types'
+import { getDirectionFromKey } from '~~/game/input'
+import type { Direction } from '~~/game/types'
 
 function isTextEntry(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
