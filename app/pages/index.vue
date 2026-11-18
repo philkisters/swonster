@@ -240,31 +240,19 @@ input {
 
 .game-shell {
   display: grid;
-  width: min(100%, 74rem);
+  width: min(100%, 34rem, max(16rem, calc(100dvh - 22rem)));
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(1rem, 3vw, 2rem);
-}
-
-.play-area {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
-  align-items: center;
-  gap: clamp(1.5rem, 5vw, 4rem);
 }
 
 .game-board-column {
   display: grid;
-  width: min(100%, 34rem);
-  justify-self: center;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
 }
 
 .game-board-wrapper {
   position: relative;
-}
-
-.game-sidebar {
-  display: grid;
-  gap: 1rem;
 }
 
 .eyebrow {
@@ -496,27 +484,6 @@ input {
 .merge-note {
   grid-column: 1 / -1;
   font-weight: 500;
-}
-
-@media (max-width: 760px) {
-  .play-area {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .game-sidebar {
-    order: -1;
-    width: min(100%, 34rem);
-    justify-self: center;
-  }
-
-  .game-header {
-    width: min(100%, 34rem);
-    justify-self: center;
-  }
-
-  .game-board-column {
-    width: min(100%, 34rem);
-  }
 }
 
 @media (max-width: 480px) {

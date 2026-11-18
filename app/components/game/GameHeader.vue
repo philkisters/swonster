@@ -42,6 +42,13 @@ const counters = computed(() => [
         class="game-counter"
         :class="counter.class"
       >
+        <img
+          class="game-counter-icon"
+          :src="`${app.baseURL}sprites/ui/${counter.key}.png`"
+          alt=""
+          width="128"
+          height="128"
+        >
         <span class="game-counter-label">{{ counter.label }}</span>
         <span class="game-counter-value">{{ counter.value }}</span>
       </div>
@@ -77,16 +84,21 @@ const counters = computed(() => [
 .game-counters {
   display: grid;
   min-width: 0;
-  grid-template-columns: auto auto;
-  gap: 0.1rem 0.6rem;
+  grid-template-columns: auto auto auto;
+  gap: 0.2rem 0.5rem;
 }
 
 .game-counter {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
-  align-items: baseline;
-  justify-items: end;
+  align-items: center;
+}
+
+.game-counter-icon {
+  width: clamp(1.35rem, 5vw, 1.6rem);
+  height: clamp(1.35rem, 5vw, 1.6rem);
+  object-fit: contain;
 }
 
 .game-counter--turn {
@@ -115,6 +127,7 @@ const counters = computed(() => [
 
 .game-counter-value {
   font-size: clamp(1.05rem, 4vw, 1.3rem);
+  justify-self: end;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   line-height: 1.2;

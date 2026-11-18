@@ -38,6 +38,7 @@ defineProps<{ queue: readonly SpawnEntry[] }>()
   border: 1px solid var(--ui-border);
   border-radius: 1rem;
   background: var(--ui-bg-elevated);
+  container-type: inline-size;
 }
 
 .spawn-preview h2 {
@@ -66,8 +67,8 @@ defineProps<{ queue: readonly SpawnEntry[] }>()
 
 .spawn-dot {
   display: grid;
-  width: clamp(1.2rem, 6vw, 1.65rem);
-  height: clamp(1.2rem, 6vw, 1.65rem);
+  width: clamp(1rem, 7cqi, 1.65rem);
+  height: clamp(1rem, 7cqi, 1.65rem);
   place-items: center;
   border-radius: 50%;
   color: var(--ui-text-inverted);
