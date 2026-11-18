@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import GameBoard from '../components/game/GameBoard.vue'
+import GameHeader from '../components/game/GameHeader.vue'
 import SpawnTimeline from '../components/game/SpawnTimeline.vue'
 import { useGame } from '../composables/useGame'
 import { useGameInput } from '../composables/useGameInput'
@@ -30,7 +31,6 @@ const tutorialSteps = [
 ]
 const tutorialStep = ref(0)
 const showTutorial = ref(true)
-const { app } = useRuntimeConfig()
 const currentTutorialStep = computed(() => {
   const step = tutorialSteps[tutorialStep.value]
   if (!step) throw new Error('Invalid tutorial step')
@@ -65,6 +65,13 @@ useGameInput(moveWhenReady)
 <template>
   <main class="game-page">
     <div class="game-shell">
+      <GameHeader
+        :turn="state.turn"
+        :score="state.score"
+        :gold="state.gold"
+        :xp="state.xp"
+      />
+
       <section
         class="play-area"
         aria-label="Game"
@@ -166,68 +173,6 @@ useGameInput(moveWhenReady)
             </button>
           </section>
         </div>
-
-        <aside class="game-sidebar">
-          <header class="game-header">
-            <div class="game-brand">
-              <img
-                class="game-logo"
-                :src="`${app.baseURL}logo.png`"
-                alt=""
-                width="80"
-                height="80"
-              >
-              <h1>Swonster</h1>
-            </div>
-            <p class="game-description">
-              Slide your monsters together and find your way across the board.
-            </p>
-          </header>
-
-          <div
-            class="game-counters"
-            aria-label="Game stats"
-            aria-live="polite"
-          >
-            <div class="turn-counter">
-              <span class="turn-label">TURN</span>
-              <span class="turn-number">{{ state.turn }}</span>
-            </div>
-            <div class="turn-counter">
-              <span class="turn-label">SCORE</span>
-              <span class="turn-number">{{ state.score }}</span>
-            </div>
-            <div class="turn-counter">
-              <span class="turn-label">GOLD</span>
-              <span class="turn-number">{{ state.gold }}</span>
-            </div>
-            <div class="turn-counter">
-              <span class="turn-label">XP</span>
-              <span class="turn-number">{{ state.xp }}</span>
-            </div>
-          </div>
-
-          <section
-            class="game-help"
-            aria-label="How to play"
-          >
-            <div class="control-card">
-              <span
-                class="control-icon"
-                aria-hidden="true"
-              >↔</span>
-              <div>
-                <h2>Merge</h2>
-                <p>Combine monsters of the same type and tier.</p>
-              </div>
-            </div>
-          </section>
-
-          <footer class="game-footer">
-            <span><i class="legend-dot legend-dot--player" /> Allies</span>
-            <span><i class="legend-dot legend-dot--enemy" /> Enemies</span>
-          </footer>
-        </aside>
       </section>
     </div>
   </main>
@@ -244,6 +189,10 @@ useGameInput(moveWhenReady)
   --game-enemy-strong: var(--ui-color-warning-700);
   --game-player-bg: color-mix(in srgb, var(--ui-color-primary-500) 18%, var(--ui-bg));
   --game-enemy-bg: color-mix(in srgb, var(--ui-color-warning-500) 18%, var(--ui-bg));
+  --game-turn-text: var(--ui-color-error-600);
+  --game-score-text: var(--ui-text-highlighted);
+  --game-gold-text: var(--ui-color-warning-600);
+  --game-xp-text: var(--ui-color-success-600);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -257,6 +206,10 @@ useGameInput(moveWhenReady)
   --game-enemy-strong: var(--ui-color-warning-400);
   --game-player-bg: color-mix(in srgb, var(--ui-color-primary-500) 24%, var(--ui-bg));
   --game-enemy-bg: color-mix(in srgb, var(--ui-color-warning-500) 24%, var(--ui-bg));
+  --game-turn-text: var(--ui-color-error-400);
+  --game-score-text: #fff;
+  --game-gold-text: var(--ui-color-warning-400);
+  --game-xp-text: var(--ui-color-success-400);
 }
 
 .light {
@@ -286,7 +239,9 @@ input {
 }
 
 .game-shell {
+  display: grid;
   width: min(100%, 74rem);
+  gap: clamp(1rem, 3vw, 2rem);
 }
 
 .play-area {
@@ -312,85 +267,12 @@ input {
   gap: 1rem;
 }
 
-.game-header {
-  margin-bottom: 0.25rem;
-}
-
-.game-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-}
-
-.game-logo {
-  width: clamp(4rem, 16vw, 5rem);
-  height: clamp(4rem, 16vw, 5rem);
-  flex: 0 0 auto;
-  border: 2px solid color-mix(in srgb, var(--ui-color-warning-400) 65%, var(--ui-border));
-  border-radius: 1.15rem;
-  box-shadow:
-    0 0.75rem 2rem color-mix(in srgb, var(--ui-color-primary-950) 18%, transparent),
-    0 0 0 0.25rem color-mix(in srgb, var(--ui-color-warning-500) 8%, transparent);
-  object-fit: cover;
-}
-
 .eyebrow {
   margin: 0 0 0.6rem;
   color: var(--game-accent-text);
   font-size: 0.72rem;
   font-weight: 850;
   letter-spacing: 0.16em;
-}
-
-h1 {
-  margin: 0;
-  color: var(--ui-color-primary-800);
-  font-size: clamp(2.5rem, 7vw, 4rem);
-  font-weight: 850;
-  letter-spacing: -0.07em;
-  line-height: 0.95;
-}
-
-.dark h1 {
-  color: var(--ui-color-warning-300);
-}
-
-.game-description {
-  margin: 0.9rem 0 0;
-  color: var(--ui-text-muted);
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-.game-counters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.45rem;
-}
-
-.turn-counter {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.5rem 0.35rem;
-  border: 1px solid var(--ui-border);
-  border-radius: 1rem;
-  background: var(--ui-bg-elevated);
-  box-shadow: 0 0.5rem 1.5rem rgb(40 50 32 / 5%);
-}
-
-.turn-label {
-  color: var(--ui-text-muted);
-  font-size: 0.65rem;
-  font-weight: 850;
-  letter-spacing: 0.08em;
-}
-
-.turn-number {
-  font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 1.25;
 }
 
 .game-tutorial-overlay {
@@ -628,17 +510,8 @@ h1 {
   }
 
   .game-header {
-    text-align: center;
-  }
-
-  .game-brand {
-    justify-content: center;
-  }
-
-  .game-description {
-    max-width: 28rem;
-    margin-right: auto;
-    margin-left: auto;
+    width: min(100%, 34rem);
+    justify-self: center;
   }
 
   .game-board-column {
@@ -647,10 +520,6 @@ h1 {
 }
 
 @media (max-width: 480px) {
-  .game-brand {
-    gap: 0.65rem;
-  }
-
   .game-tutorial-overlay,
   .game-over-overlay {
     border-radius: 1rem;
@@ -659,10 +528,6 @@ h1 {
   .game-page {
     align-items: start;
     padding: 1.5rem 1rem;
-  }
-
-  .turn-counter {
-    padding: 0.45rem 0.25rem;
   }
 
   .game-help {
