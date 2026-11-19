@@ -4,14 +4,30 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   getFirestore,
+  limit,
+  orderBy,
+  query,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from 'firebase/firestore'
 import type { DocumentReference, Firestore } from 'firebase/firestore'
 import type { GameState } from '~~/game/types'
 import type { GameAction } from './useGame'
+
+export type HistoryOrder = 'latest' | 'best'
+
+export interface GameHistoryEntry {
+  id: string
+  startTime: number
+  endTime: number | null
+  turn: number
+  highScore: number
+  status: string
+}
 
 interface Session {
   reference: DocumentReference
@@ -38,16 +54,21 @@ export function useGameTracking() {
     error.value = message
   }
 
-  function observeWrite(write: Promise<void>) {
+  const writes = new Set<Promise<void>>()
+
+  function observeWrite(write: Promise<void>): Promise<void> {
     pendingWrites.value++
-    void write
+    const observed = write
       .catch((cause: unknown) => {
         console.error('A game save failed.', cause)
         saveError.value = 'A game save failed. Your game data may be incomplete.'
       })
       .finally(() => {
         pendingWrites.value--
+        writes.delete(observed)
       })
+    writes.add(observed)
+    return observed
   }
 
   async function connect() {
@@ -131,6 +152,42 @@ export function useGameTracking() {
     }
   }
 
+  async function loadHistory(order: HistoryOrder): Promise<GameHistoryEntry[]> {
+    if (!database || !playerId || !ready.value) {
+      throw new Error('Connect to Firebase before loading your history.')
+    }
+
+    const games = collection(database, 'players', playerId, 'games')
+    const historyQuery =
+      order === 'latest'
+        ? query(games, orderBy('startTime', 'desc'), limit(10))
+        : query(games, where('status', '==', 'game-over'))
+    const snapshot = await getDocs(historyQuery)
+    const entries = snapshot.docs.map((entry) => {
+      const data = entry.data()
+      const startTime = typeof data.startTime === 'number' ? data.startTime : 0
+      const endTime = typeof data.endTime === 'number' ? data.endTime : null
+      const turn = typeof data.turn === 'number' ? data.turn : 0
+      const highScore = typeof data.highScore === 'number' ? data.highScore : 0
+      const status = typeof data.status === 'string' ? data.status : 'active'
+
+      return {
+        id: entry.id,
+        startTime,
+        endTime,
+        turn,
+        highScore,
+        status,
+      }
+    })
+
+    if (order === 'latest') return entries
+
+    return entries
+      .sort((first, second) => second.highScore - first.highScore || second.startTime - first.startTime)
+      .slice(0, 10)
+  }
+
   function begin() {
     session = undefined
     if (!database || !playerId || !ready.value) return false
@@ -176,15 +233,17 @@ export function useGameTracking() {
     observeWrite(batch.commit())
   }
 
-  function end() {
-    if (!session || session.ended) return
-    session.ended = true
-    observeWrite(
-      updateDoc(session.reference, {
-        endTime: Date.now(),
-        status: 'abandoned',
-      }),
-    )
+  async function end() {
+    if (session && !session.ended) {
+      session.ended = true
+      observeWrite(
+        updateDoc(session.reference, {
+          endTime: Date.now(),
+          status: 'abandoned',
+        }),
+      )
+    }
+    await Promise.all([...writes])
   }
 
   return {
@@ -196,6 +255,7 @@ export function useGameTracking() {
     pendingWrites,
     connect,
     saveUsername,
+    loadHistory,
     begin,
     record,
     end,

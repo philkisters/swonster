@@ -10,6 +10,7 @@ const firebase = vi.hoisted(() => ({
   batchUpdate: vi.fn(),
   commit: vi.fn(),
   signIn: vi.fn(),
+  getDocs: vi.fn(),
 }))
 
 vi.mock('firebase/app', () => ({
@@ -31,8 +32,16 @@ vi.mock('firebase/firestore', () => ({
       .join('/'),
   }),
   getDoc: firebase.getDoc,
+  getDocs: firebase.getDocs,
   setDoc: firebase.setDoc,
   updateDoc: firebase.updateDoc,
+  query: (source: unknown, ...constraints: unknown[]) => ({
+    source,
+    constraints,
+  }),
+  where: (...values: unknown[]) => ({ type: 'where', values }),
+  orderBy: (...values: unknown[]) => ({ type: 'orderBy', values }),
+  limit: (value: number) => ({ type: 'limit', value }),
   writeBatch: () => ({
     set: firebase.batchSet,
     update: firebase.batchUpdate,
@@ -57,6 +66,7 @@ beforeEach(() => {
   firebase.setDoc.mockResolvedValue(undefined)
   firebase.updateDoc.mockResolvedValue(undefined)
   firebase.commit.mockResolvedValue(undefined)
+  firebase.getDocs.mockResolvedValue({ docs: [] })
 })
 
 describe('game tracking', () => {
@@ -152,5 +162,65 @@ describe('game tracking', () => {
     await tracking.saveUsername('New name')
     expect(tracking.error.value).toContain('game save failed')
     log.mockRestore()
+  })
+
+  it('loads the latest ten games and the ten best finished games', async () => {
+    const tracking = useGameTracking()
+    await tracking.connect()
+    firebase.getDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'latest',
+          data: () => ({
+            startTime: 20,
+            endTime: null,
+            turn: 4,
+            highScore: 12,
+            status: 'active',
+          }),
+        },
+      ],
+    })
+
+    await expect(tracking.loadHistory('latest')).resolves.toEqual([
+      {
+        id: 'latest',
+        startTime: 20,
+        endTime: null,
+        turn: 4,
+        highScore: 12,
+        status: 'active',
+      },
+    ])
+    expect(firebase.getDocs.mock.calls[0][0]).toMatchObject({
+      source: { path: 'players/abcde12345/games' },
+      constraints: [
+        { type: 'orderBy', values: ['startTime', 'desc'] },
+        { type: 'limit', value: 10 },
+      ],
+    })
+
+    firebase.getDocs.mockResolvedValueOnce({
+      docs: Array.from({ length: 12 }, (_, index) => ({
+        id: `game-${index}`,
+        data: () => ({
+          startTime: index,
+          endTime: index + 100,
+          turn: index + 1,
+          highScore: index,
+          status: 'game-over',
+        }),
+      })),
+    })
+
+    const best = await tracking.loadHistory('best')
+    expect(best).toHaveLength(10)
+    expect(best[0]?.id).toBe('game-11')
+    expect(best[9]?.id).toBe('game-2')
+    expect(firebase.getDocs.mock.calls[1][0]).toMatchObject({
+      constraints: [
+        { type: 'where', values: ['status', '==', 'game-over'] },
+      ],
+    })
   })
 })

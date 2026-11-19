@@ -37,16 +37,18 @@
         type="button"
         class="game-menu-button-secondary"
         :disabled="loading"
+        @click="router.push('/history')"
       >
-        History (soon)
+        History
       </button>
       
       <button
         type="button"
         class="game-menu-button-secondary"
         :disabled="loading"
+        @click="router.push({ path: '/history', query: { view: 'best' } })"
       >
-        High Scores (soon)
+        High Scores
       </button>
     </template>
     <template v-if="!ready && error !== ''">
@@ -129,7 +131,7 @@ onMounted(() => void connect())
   color: var(--ui-text-inverted);
 }
   
-.game-menu-button-secondary {
+button.game-menu-button-secondary {
   border: 0;
   font-weight: 750;
   border: 1px solid var(--game-gold-text);

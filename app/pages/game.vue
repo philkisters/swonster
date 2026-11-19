@@ -59,6 +59,13 @@
             >
               New game
             </button>
+            <button
+              type="button"
+              class="game-over-menu"
+              @click="returnToMenu"
+            >
+              Go to Main Menu
+            </button>
           </section>
         </div>
         <GameSpellBar
@@ -136,21 +143,21 @@ function moveWhenReady(direction: Direction) {
   if (!showTutorial.value && !targeting.value) move(direction)
 }
 
-function restartGame() {
-  end()
+async function restartGame() {
+  await end()
   cancelSpell()
   restart()
   savedGame.value = begin()
 }
 
-function returnToMenu() {
-  end()
+async function returnToMenu() {
+  await end()
   cancelSpell()
-  router.push('/')
+  await router.push('/')
 }
 
-onMounted(() => {
-  connect()
+onMounted(async () => {
+  await connect()
   savedGame.value = begin()
 })
 const router = useRouter()
@@ -262,6 +269,20 @@ useGameInput(moveWhenReady, cancelSpell)
 
 .game-over-restart:hover {
   filter: brightness(0.9);
+}
+
+.game-over-menu {
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--ui-border);
+  border-radius: 0.7rem;
+  background: var(--ui-bg-elevated);
+  color: var(--ui-text-highlighted);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.game-over-menu:hover {
+  background: var(--ui-bg-muted);
 }
 
 .game-help {
