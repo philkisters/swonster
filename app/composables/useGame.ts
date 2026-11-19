@@ -1,7 +1,7 @@
 import { onScopeDispose, readonly, ref } from 'vue'
 import { createInitialState } from '../../game/initialState'
 import { executeTurn } from '../../game/engine'
-import type { Direction, GameEvent, GameState } from '../../game/types'
+import type { Direction, GameEvent, GameState, SpawnEntry } from '../../game/types'
 
 interface AttackAnimation {
   monsterId: string
@@ -14,11 +14,12 @@ interface PendingTurn {
   stateAfterActiveAttacks: GameState
   activeAnimations: AttackAnimation[]
   counterAnimations: AttackAnimation[]
-  hasSpawn: boolean
+  spawnedEntry: SpawnEntry | null
 }
 
 export function useGame() {
   const state = ref<GameState>(createInitialState())
+  const spawnHistory = ref<SpawnEntry[]>(createSpawnHistory(state.value))
   const attackAnimations = ref<AttackAnimation[]>([])
   const mergeAnimations = ref<string[]>([])
   const pendingTurn = ref<PendingTurn | null>(null)
@@ -57,7 +58,9 @@ export function useGame() {
       stateAfterActiveAttacks,
       activeAnimations,
       counterAnimations,
-      hasSpawn: result.events.some(event => event.type === 'spawn')
+      spawnedEntry: result.events.some(event => event.type === 'spawn')
+        ? state.value.spawnQueue[0] ?? null
+        : null
     }
     isAnimating.value = true
     mergeAnimations.value = result.events.flatMap(event => event.type === 'merge' ? [event.resultId] : [])
@@ -119,6 +122,7 @@ export function useGame() {
     clearTimeout(mergeDelay)
     mergeDelay = undefined
     state.value = createInitialState()
+    spawnHistory.value = createSpawnHistory(state.value)
     attackAnimations.value = []
     mergeAnimations.value = []
     pendingTurn.value = null
@@ -134,7 +138,9 @@ export function useGame() {
     attackAnimations.value = []
     animationPhase.value = null
     pendingTurn.value = null
-    if (!pending.hasSpawn) {
+    if (pending.spawnedEntry) {
+      spawnHistory.value = [...spawnHistory.value, pending.spawnedEntry]
+    } else {
       isAnimating.value = false
     }
   }
@@ -146,6 +152,7 @@ export function useGame() {
 
   return {
     state: readonly(state),
+    spawnHistory: readonly(spawnHistory),
     attackAnimations: readonly(attackAnimations),
     mergeAnimations: readonly(mergeAnimations),
     move,
@@ -154,6 +161,23 @@ export function useGame() {
     finishAttackAnimations,
     finishSpawnAnimation
   }
+}
+
+/**
+ * Lists the monsters already on the board as if they had spawned on earlier turns,
+ * enemies first, so the timeline has a past to show at the start of a game.
+ */
+function createSpawnHistory(state: GameState): SpawnEntry[] {
+  const monsters = state.cells.flatMap(monster => monster ? [monster] : [])
+
+  return [
+    ...monsters.filter(monster => monster.faction === 'enemy'),
+    ...monsters.filter(monster => monster.faction === 'player')
+  ].map(monster => ({
+    kind: monster.isBoss ? 'boss' : monster.faction === 'player' ? 'friend' : 'enemy',
+    typeId: monster.typeId,
+    tier: monster.tier
+  }))
 }
 
 function createAttackAnimations(

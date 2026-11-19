@@ -38,6 +38,7 @@ const currentTutorialStep = computed(() => {
 })
 const {
   state,
+  spawnHistory,
   attackAnimations,
   mergeAnimations,
   move,
@@ -66,7 +67,6 @@ useGameInput(moveWhenReady)
   <main class="game-page">
     <div class="game-shell">
       <GameHeader
-        :turn="state.turn"
         :score="state.score"
         :gold="state.gold"
         :xp="state.xp"
@@ -77,7 +77,11 @@ useGameInput(moveWhenReady)
         aria-label="Game"
       >
         <div class="game-board-column">
-          <SpawnTimeline :queue="state.spawnQueue" />
+          <SpawnTimeline
+            :history="spawnHistory"
+            :queue="state.spawnQueue"
+            :turn="state.turn"
+          />
 
           <div class="game-board-wrapper">
             <GameBoard

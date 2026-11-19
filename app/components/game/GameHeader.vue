@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 
 const props = defineProps<{
-  turn: number
   score: number
   gold: number
   xp: number
@@ -11,7 +10,6 @@ const props = defineProps<{
 const { app } = useRuntimeConfig()
 
 const counters = computed(() => [
-  { key: 'turn', class: 'game-counter--turn', label: 'Turn', value: props.turn },
   { key: 'score', class: 'game-counter--score', label: 'Score', value: props.score },
   { key: 'gold', class: 'game-counter--gold', label: 'Gold', value: props.gold },
   { key: 'xp', class: 'game-counter--xp', label: 'XP', value: props.xp }
@@ -99,10 +97,6 @@ const counters = computed(() => [
   width: clamp(1.35rem, 5vw, 1.6rem);
   height: clamp(1.35rem, 5vw, 1.6rem);
   object-fit: contain;
-}
-
-.game-counter--turn {
-  color: var(--game-turn-text);
 }
 
 .game-counter--score {
