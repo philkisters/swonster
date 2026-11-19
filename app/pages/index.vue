@@ -2,7 +2,6 @@
   <main class="game-page">
     <div class="game-shell">
       <GameHeader
-        :turn="state.turn"
         :score="state.score"
         :gold="state.gold"
         :xp="state.xp"
@@ -13,7 +12,11 @@
         aria-label="Game"
       >
         <div class="game-board-column">
-          <GameSpawnTimeline :queue="state.spawnQueue" />
+          <GameSpawnTimeline
+            :history="spawnHistory"
+            :queue="state.spawnQueue"
+            :turn="state.turn"
+          />
 
           <div class="game-board-wrapper">
             <GameBoard
@@ -84,6 +87,7 @@ const showTutorial = ref(true)
 
 const {
   state,
+  spawnHistory,
   attackAnimations,
   mergeAnimations,
   move,
