@@ -63,6 +63,15 @@
         @animationend.stop="emit('spellEffectDone')"
       >
     </div>
+    <span
+      v-for="popup in healthPopups"
+      :key="popup.id"
+      class="board-health-popup"
+      :class="popup.amount > 0 ? 'board-health-popup--heal' : 'board-health-popup--damage'"
+      :style="{ gridArea: getGridArea(popup.cell) }"
+      aria-hidden="true"
+      @animationend="emit('healthPopupDone', popup.id)"
+    >{{ popup.amount > 0 ? `+${popup.amount}` : `−${-popup.amount}` }}</span>
     <button
       v-for="line in lineOptions"
       :key="`${line.shape}-${line.index}`"
@@ -120,17 +129,25 @@ interface SpellEffect {
   cells: readonly number[]
 }
 
+interface HealthPopup {
+  id: number
+  cell: number
+  amount: number
+}
+
 const props = defineProps<{
   state: BoardState
   attackAnimations: readonly AttackAnimation[]
   mergeAnimations: readonly string[]
   targeting?: Targeting | null
   spellEffect?: SpellEffect | null
+  healthPopups?: readonly HealthPopup[]
 }>()
 const emit = defineEmits<{
   move: [direction: Direction]
   pick: [target: Target]
   spellEffectDone: []
+  healthPopupDone: [id: number]
   attackAnimationsDone: []
   mergeAnimationsDone: []
   spawnAnimationDone: []
@@ -159,6 +176,13 @@ const previewCells = computed(() => {
 
 function getCellIndices(targets: readonly Target[] = []): number[] {
   return targets.flatMap(target => target.shape === 'cell' ? [target.index] : [])
+}
+
+function getGridArea(index: number): string {
+  const column = index % props.state.width + 1
+  const row = Math.floor(index / props.state.width) + 1
+
+  return `${row} / ${column} / ${row + 1} / ${column + 1}`
 }
 
 function isDimmed(index: number): boolean {
@@ -420,6 +444,33 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   animation: board-spell-burst 560ms ease-out both;
 }
 
+.board-health-popup {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  inset: 0;
+  font-size: clamp(1.15rem, 6vw, 2rem);
+  font-weight: 850;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow:
+    0 0 0.2em var(--ui-bg),
+    0.06em 0.06em 0 var(--ui-bg),
+    -0.06em 0.06em 0 var(--ui-bg),
+    0.06em -0.06em 0 var(--ui-bg),
+    -0.06em -0.06em 0 var(--ui-bg);
+  animation: board-health-popup 1000ms ease-out both;
+}
+
+.board-health-popup--damage {
+  color: var(--game-damage-text);
+}
+
+.board-health-popup--heal {
+  color: var(--game-heal-text);
+}
+
 .board-line-handle {
   --line-centre: calc(
     var(--board-gap) * (var(--line) + 1)
@@ -482,6 +533,44 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   }
 }
 
+@keyframes board-health-popup {
+  0% {
+    opacity: 0;
+    scale: 0.5;
+    translate: 0 10%;
+  }
+
+  15% {
+    opacity: 1;
+    scale: 1.2;
+    translate: 0 -5%;
+  }
+
+  30% {
+    scale: 1;
+  }
+
+  65% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1;
+    translate: 0 -65%;
+  }
+}
+
+@keyframes board-health-popup-fade {
+  0%, 60% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
 @keyframes board-spell-burst {
   0% {
     opacity: 0;
@@ -534,6 +623,10 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
 
   .board-spell-burst {
     animation-duration: 1ms;
+  }
+
+  .board-health-popup {
+    animation-name: board-health-popup-fade;
   }
 }
 </style>

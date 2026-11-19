@@ -25,8 +25,10 @@
               :merge-animations="mergeAnimations"
               :targeting="targeting"
               :spell-effect="spellEffect"
+              :health-popups="healthPopups"
               @pick="pickTarget"
               @spell-effect-done="finishSpellEffect"
+              @health-popup-done="finishHealthPopup"
               @merge-animations-done="finishMergeAnimations"
               @attack-animations-done="finishAttackAnimations"
               @spawn-animation-done="finishSpawnAnimation"
@@ -102,6 +104,7 @@ const {
   attackAnimations,
   mergeAnimations,
   spellEffect,
+  healthPopups,
   isAnimating,
   move,
   cast,
@@ -109,7 +112,8 @@ const {
   finishMergeAnimations,
   finishAttackAnimations,
   finishSpawnAnimation,
-  finishSpellEffect
+  finishSpellEffect,
+  finishHealthPopup
 } = useGame()
 
 const {
@@ -148,6 +152,8 @@ useGameInput(moveWhenReady, cancelSpell)
   --game-gold-text: var(--ui-color-warning-600);
   --game-xp-text: var(--ui-color-success-600);
   --game-target: var(--ui-text-highlighted);
+  --game-damage-text: var(--ui-color-error-600);
+  --game-heal-text: var(--ui-color-success-600);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -165,6 +171,8 @@ useGameInput(moveWhenReady, cancelSpell)
   --game-score-text: #fff;
   --game-gold-text: var(--ui-color-warning-400);
   --game-xp-text: var(--ui-color-success-400);
+  --game-damage-text: var(--ui-color-error-400);
+  --game-heal-text: var(--ui-color-success-400);
 }
 
 .light {

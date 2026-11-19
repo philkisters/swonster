@@ -1,6 +1,8 @@
 import { onScopeDispose, readonly, ref } from 'vue'
 import { createInitialState } from '~~/game/initialState'
 import { executeTurn } from '~~/game/engine'
+import { getHealthChanges } from '~~/game/healthChanges'
+import type { HealthChange } from '~~/game/healthChanges'
 import { castSpell } from '~~/game/spells'
 import { getTargetCells } from '~~/game/targeting'
 import type { Target } from '~~/game/targeting'
@@ -18,13 +20,21 @@ interface SpellEffect {
   cells: number[]
 }
 
+interface HealthPopup extends HealthChange {
+  id: number
+}
+
 interface PendingTurn {
   finalState: GameState
   stateAfterActiveAttacks: GameState
   activeAnimations: AttackAnimation[]
   counterAnimations: AttackAnimation[]
+  activeHealthChanges: HealthChange[]
+  counterHealthChanges: HealthChange[]
   spawnedEntry: SpawnEntry | null
 }
+
+const HEALTH_SPELLS: ReadonlySet<SpellId> = new Set(['fireball', 'fireballBarrage', 'heal'])
 
 export function useGame() {
   const state = ref<GameState>(createInitialState())
@@ -35,8 +45,10 @@ export function useGame() {
   const animationPhase = ref<'merge' | 'merge-delay' | 'attack' | 'counter' | null>(null)
   const isAnimating = ref(false)
   const spellEffect = ref<SpellEffect | null>(null)
+  const healthPopups = ref<HealthPopup[]>([])
   let mergeDelay: ReturnType<typeof setTimeout> | undefined
   let spellCasts = 0
+  let healthPopupCount = 0
 
   onScopeDispose(() => clearTimeout(mergeDelay))
 
@@ -69,6 +81,11 @@ export function useGame() {
       stateAfterActiveAttacks,
       activeAnimations,
       counterAnimations,
+      activeHealthChanges: getHealthChanges(
+        (result.stateAfterMovement ?? stateAfterActiveAttacks).cells,
+        stateAfterActiveAttacks.cells
+      ),
+      counterHealthChanges: getHealthChanges(stateAfterActiveAttacks.cells, result.state.cells),
       spawnedEntry: result.events.some(event => event.type === 'spawn')
         ? state.value.spawnQueue[0] ?? null
         : null
@@ -101,15 +118,17 @@ export function useGame() {
     const pending = pendingTurn.value
     if (!pending) return
 
-    if (pending.activeAnimations.length > 0) {
-      state.value = pending.stateAfterActiveAttacks
-      setAttackAnimations('attack', pending.activeAnimations)
-    } else if (pending.counterAnimations.length > 0) {
-      state.value = pending.stateAfterActiveAttacks
-      setAttackAnimations('counter', pending.counterAnimations)
-    } else {
+    const phase = pending.activeAnimations.length > 0
+      ? 'attack'
+      : pending.counterAnimations.length > 0 ? 'counter' : null
+    if (!phase) {
       showSpawn()
+      return
     }
+
+    state.value = pending.stateAfterActiveAttacks
+    showHealthChanges(pending.activeHealthChanges)
+    setAttackAnimations(phase, phase === 'attack' ? pending.activeAnimations : pending.counterAnimations)
   }
 
   function finishAttackAnimations() {
@@ -141,11 +160,25 @@ export function useGame() {
       spellId,
       cells: targets.flatMap(target => getTargetCells(state.value, target))
     }
+    if (HEALTH_SPELLS.has(spellId)) {
+      showHealthChanges(getHealthChanges(state.value.cells, result.state.cells))
+    }
     state.value = result.state
   }
 
   function finishSpellEffect() {
     spellEffect.value = null
+  }
+
+  function showHealthChanges(changes: HealthChange[]) {
+    healthPopups.value = [
+      ...healthPopups.value,
+      ...changes.map(change => ({ ...change, id: ++healthPopupCount }))
+    ]
+  }
+
+  function finishHealthPopup(id: number) {
+    healthPopups.value = healthPopups.value.filter(popup => popup.id !== id)
   }
 
   function restart() {
@@ -159,6 +192,7 @@ export function useGame() {
     animationPhase.value = null
     isAnimating.value = false
     spellEffect.value = null
+    healthPopups.value = []
   }
 
   function showSpawn() {
@@ -166,6 +200,7 @@ export function useGame() {
     if (!pending) return
 
     state.value = pending.finalState
+    showHealthChanges(pending.counterHealthChanges)
     attackAnimations.value = []
     animationPhase.value = null
     pendingTurn.value = null
@@ -187,6 +222,7 @@ export function useGame() {
     attackAnimations: readonly(attackAnimations),
     mergeAnimations: readonly(mergeAnimations),
     spellEffect: readonly(spellEffect),
+    healthPopups: readonly(healthPopups),
     isAnimating: readonly(isAnimating),
     move,
     cast,
@@ -194,7 +230,8 @@ export function useGame() {
     finishMergeAnimations,
     finishAttackAnimations,
     finishSpawnAnimation,
-    finishSpellEffect
+    finishSpellEffect,
+    finishHealthPopup
   }
 }
 
