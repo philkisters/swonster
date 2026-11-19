@@ -72,6 +72,16 @@ Build a browser-based, turn-based casual puzzle game that combines 2048 sliding/
 - Losing all friendly monsters before spawning does not immediately end the game; a queued friendly can still spawn and save the run.
 - Inactive swipes do not attempt a spawn and therefore do not trigger game over, even on a full board.
 
+### Spells
+
+- Below the board are **4 spell slots**. A run starts with one spell; every valid turn deals one random spell (not already on offer) into the first empty slot. With all slots full no new spell arrives until one is bought.
+- A spell is **bought with gold and cast immediately** on the targets the player picks. Casting is a free action: no turn increment, no spawn, no slot refill.
+- A spell can only be bought with enough gold and when a complete set of valid targets exists. Cancelling before the last target costs nothing.
+- Each spell is one function in `game/spells.ts`, registered in `SPELLS` with name, description, cost and its target steps. `game/targeting.ts` turns target steps into the options the UI highlights (cells, or rows/columns for line spells).
+- Starter spells: Fireball (damage one enemy), Fireball Barrage (lower damage to every enemy in a row or column), Move / Super Move (own / any monster to a free cell), Swap / Super Swap (two own / any two monsters), Type Change (own monster becomes the next player type, HP ratio kept), Fusion (two own monsters of the same tier, any types, become one of the next tier with the first pick's type), Convert Enemy (enemy joins the player, keeps its type), Heal (own monster to full HP), Evolve (own monster +1 tier at full HP).
+- Enemies defeated by spells grant the normal defeat rewards; Fusion grants the friendly merge score. Reaching the enemy-tier unlock level through a spell unlocks higher enemy tiers like a merge does.
+- Costs and damage values are placeholders for balancing.
+
 ## Canonical turn pipeline
 
 1. Receive direction from keyboard or swipe.
@@ -84,9 +94,10 @@ Build a browser-based, turn-based casual puzzle game that combines 2048 sliding/
 8. Apply counterattack damage simultaneously; remove dead monsters.
 9. Grant rewards for defeated enemy monsters.
 10. If no movement, merge or HP change occurred, return **invalid** and preserve the original state (no spawn).
-11. Attempt to spawn the next monster. If no free cell remains, end the game without advancing the spawn timeline.
-12. Otherwise, advance the spawn timeline by one item and spawn the indicated monster in a free cell.
-13. If no friendly monsters remain after spawning, end the game; return the new state and events.
+11. Deal a spell into the first empty spell slot, if any.
+12. Attempt to spawn the next monster. If no free cell remains, end the game without advancing the spawn timeline.
+13. Otherwise, advance the spawn timeline by one item and spawn the indicated monster in a free cell.
+14. If no friendly monsters remain after spawning, end the game; return the new state and events.
 
 **Implementation detail:** Determine whether a swipe is inactive before committing any effects. The ordering above lists validity at step 10 for clarity; pure engine code may compute a candidate state and discard it if invalid. Never mutate the input state.
 

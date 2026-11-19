@@ -1,7 +1,8 @@
-import { ENEMY_DEFEAT_REWARD } from './config'
+import { ENEMY_DEFEAT_REWARD, ENEMY_TIER_UNLOCK_PLAYER_TIER } from './config'
 import { resolveCombat } from './combat'
 import { slideAndMerge } from './movement'
 import { spawnNextMonster } from './spawning'
+import { refillSpellSlot } from './spellSlots'
 import type { Direction, GameState, TurnResult } from './types'
 
 export function executeTurn(state: GameState, direction: Direction): TurnResult {
@@ -24,13 +25,14 @@ export function executeTurn(state: GameState, direction: Direction): TurnResult 
   const unlockedEnemyTiers = movement.events.some(event =>
     event.type === 'merge'
     && movement.cells[event.at]?.faction === 'player'
-    && movement.cells[event.at]?.tier === 3
+    && movement.cells[event.at]?.tier === ENEMY_TIER_UNLOCK_PLAYER_TIER
   )
   const stateAfterMovement: GameState = {
     ...state,
     cells: movement.cells,
     turn: state.turn + 1,
     score: state.score + movement.score,
+    ...refillSpellSlot(state),
     enemyTierUnlockTurn: state.enemyTierUnlockTurn ?? (unlockedEnemyTiers ? state.turn + 1 : null)
   }
   const stateAfterActiveAttacks: GameState = {

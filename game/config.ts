@@ -1,6 +1,8 @@
+import type { Faction } from './types'
+
 export interface MonsterTypeDefinition {
   name: string
-  faction: 'player' | 'enemy'
+  faction: Faction
   spritePrefix: string
   baseMaxHp: number
   baseAtk: number
@@ -32,6 +34,8 @@ export const ENEMY_DEFEAT_REWARD = {
 export const ENEMY_DEFEAT_SCORE_MULTIPLIER = 3
 export const FRIENDLY_MERGE_SCORE = 3
 export const FRIENDLY_MERGE_SCORE_MULTIPLIER = 2
+export const ENEMY_TIER_UNLOCK_PLAYER_TIER = 3
+export const SPELL_SLOT_COUNT = 4
 
 export const MONSTER_TYPES: Record<string, MonsterTypeDefinition> = {
   dragon: {
@@ -70,6 +74,19 @@ export function getMonsterDefinition(typeId: string): MonsterTypeDefinition {
   }
 
   return definition
+}
+
+export function getMonsterTypeIds(faction: Faction): string[] {
+  return Object.keys(MONSTER_TYPES).filter(typeId => MONSTER_TYPES[typeId]?.faction === faction)
+}
+
+export function getEnemyDefeatScore(tier: number): number {
+  return ENEMY_DEFEAT_REWARD.score * ENEMY_DEFEAT_SCORE_MULTIPLIER ** (tier - 1)
+}
+
+/** Score for merging two friendly monsters of the given tier into the next one. */
+export function getFriendlyMergeScore(tier: number): number {
+  return FRIENDLY_MERGE_SCORE * FRIENDLY_MERGE_SCORE_MULTIPLIER ** (tier - 1)
 }
 
 function getMonsterSpriteFile(typeId: string, tier: number): string {

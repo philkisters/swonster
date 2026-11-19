@@ -1,4 +1,4 @@
-import { ENEMY_DEFEAT_REWARD, ENEMY_DEFEAT_SCORE_MULTIPLIER } from './config'
+import { getEnemyDefeatScore } from './config'
 import type { Direction, GameEvent, GameState, Monster } from './types'
 
 interface Attack {
@@ -144,7 +144,7 @@ export function resolveCombat(state: GameState, direction: Direction): CombatRes
   const defeatedEnemies = [...activeResult.deaths, ...counterResult.deaths]
     .filter(monster => monster.faction === 'enemy')
   const enemyDefeatScore = defeatedEnemies.reduce(
-    (score, monster) => score + ENEMY_DEFEAT_REWARD.score * ENEMY_DEFEAT_SCORE_MULTIPLIER ** (monster.tier - 1),
+    (score, monster) => score + getEnemyDefeatScore(monster.tier),
     0
   )
 

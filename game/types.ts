@@ -2,6 +2,18 @@ export type Direction = 'up' | 'down' | 'left' | 'right'
 export type Faction = 'player' | 'enemy'
 export type SpawnKind = 'friend' | 'enemy' | 'boss'
 export type GameOverReason = 'board-full' | 'no-friendly-monsters'
+export type SpellId
+  = | 'fireball'
+    | 'fireballBarrage'
+    | 'move'
+    | 'swap'
+    | 'superMove'
+    | 'superSwap'
+    | 'typeChange'
+    | 'fusion'
+    | 'convertEnemy'
+    | 'heal'
+    | 'evolve'
 
 export interface Monster {
   id: string
@@ -32,6 +44,8 @@ export interface GameState {
   enemyTierUnlockTurn: number | null
   spawnQueue: SpawnEntry[]
   rngSeed: number
+  spellSlots: (SpellId | null)[]
+  spellRngSeed: number
   gameOver: boolean
   gameOverReason?: GameOverReason
 }

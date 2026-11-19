@@ -4,24 +4,19 @@ import {
   FRIEND_SPAWN_CHANCE,
   getMonsterDefinition,
   getMonsterStats,
-  MONSTER_TYPES,
+  getMonsterTypeIds,
   SPAWN_QUEUE_LENGTH,
   SPAWN_TIER
 } from './config'
+import { nextSeed } from './rng'
 import type { GameEvent, GameState, Monster, SpawnEntry, SpawnKind } from './types'
-
-function nextSeed(seed: number): number {
-  return (Math.imul(seed, 1664525) + 1013904223) >>> 0
-}
 
 export function nextSpawnEntry(seed: number, turnsSinceUnlock = 0): { entry: SpawnEntry, rngSeed: number } {
   let rngSeed = nextSeed(seed)
   const kind: SpawnKind = rngSeed / 0x100000000 < FRIEND_SPAWN_CHANCE ? 'friend' : 'enemy'
   rngSeed = nextSeed(rngSeed)
   const faction = kind === 'friend' ? 'player' : 'enemy'
-  const typeIds = Object.entries(MONSTER_TYPES)
-    .filter(([, definition]) => definition.faction === faction)
-    .map(([typeId]) => typeId)
+  const typeIds = getMonsterTypeIds(faction)
   const typeIndex = Math.floor(rngSeed / 0x100000000 * typeIds.length)
   const typeId = typeIds[typeIndex]
   if (!typeId) {

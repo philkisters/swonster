@@ -1,12 +1,21 @@
 import { onScopeDispose, readonly, ref } from 'vue'
 import { createInitialState } from '~~/game/initialState'
 import { executeTurn } from '~~/game/engine'
-import type { Direction, GameEvent, GameState, SpawnEntry } from '~~/game/types'
+import { castSpell } from '~~/game/spells'
+import { getTargetCells } from '~~/game/targeting'
+import type { Target } from '~~/game/targeting'
+import type { Direction, GameEvent, GameState, SpawnEntry, SpellId } from '~~/game/types'
 
 interface AttackAnimation {
   monsterId: string
   direction: Direction
   phase: 'attack' | 'counter'
+}
+
+interface SpellEffect {
+  id: number
+  spellId: SpellId
+  cells: number[]
 }
 
 interface PendingTurn {
@@ -25,7 +34,9 @@ export function useGame() {
   const pendingTurn = ref<PendingTurn | null>(null)
   const animationPhase = ref<'merge' | 'merge-delay' | 'attack' | 'counter' | null>(null)
   const isAnimating = ref(false)
+  const spellEffect = ref<SpellEffect | null>(null)
   let mergeDelay: ReturnType<typeof setTimeout> | undefined
+  let spellCasts = 0
 
   onScopeDispose(() => clearTimeout(mergeDelay))
 
@@ -118,6 +129,25 @@ export function useGame() {
     isAnimating.value = false
   }
 
+  function cast(slot: number, targets: Target[]) {
+    if (isAnimating.value) return
+
+    const spellId = state.value.spellSlots[slot]
+    const result = castSpell(state.value, slot, targets)
+    if (!result.valid || !spellId) return
+
+    spellEffect.value = {
+      id: ++spellCasts,
+      spellId,
+      cells: targets.flatMap(target => getTargetCells(state.value, target))
+    }
+    state.value = result.state
+  }
+
+  function finishSpellEffect() {
+    spellEffect.value = null
+  }
+
   function restart() {
     clearTimeout(mergeDelay)
     mergeDelay = undefined
@@ -128,6 +158,7 @@ export function useGame() {
     pendingTurn.value = null
     animationPhase.value = null
     isAnimating.value = false
+    spellEffect.value = null
   }
 
   function showSpawn() {
@@ -155,11 +186,15 @@ export function useGame() {
     spawnHistory: readonly(spawnHistory),
     attackAnimations: readonly(attackAnimations),
     mergeAnimations: readonly(mergeAnimations),
+    spellEffect: readonly(spellEffect),
+    isAnimating: readonly(isAnimating),
     move,
+    cast,
     restart,
     finishMergeAnimations,
     finishAttackAnimations,
-    finishSpawnAnimation
+    finishSpawnAnimation,
+    finishSpellEffect
   }
 }
 

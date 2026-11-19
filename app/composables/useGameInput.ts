@@ -10,9 +10,13 @@ function isTextEntry(target: EventTarget | null): boolean {
     || target instanceof HTMLSelectElement
 }
 
-export function useGameInput(onDirection: (direction: Direction) => void) {
+export function useGameInput(onDirection: (direction: Direction) => void, onCancel?: () => void) {
   function onKeydown(event: KeyboardEvent) {
     if (isTextEntry(event.target)) return
+    if (event.key === 'Escape') {
+      onCancel?.()
+      return
+    }
 
     const direction = getDirectionFromKey(event.key, event.repeat)
     if (!direction) return

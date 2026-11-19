@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createSpawnQueue } from '../game/spawning'
+import { createSpellSlots } from '../game/spellSlots'
 import { executeTurn } from '../game/engine'
 import type { Faction, GameState, Monster } from '../game/types'
 
@@ -38,7 +39,8 @@ function createState(monsters: [number, Monster][]): GameState {
     xp: 0,
     enemyTierUnlockTurn: null,
     gameOver: false,
-    ...spawnState
+    ...spawnState,
+    ...createSpellSlots()
   }
 }
 

@@ -85,6 +85,11 @@ const tutorialSteps = [
     icon: '● ● ●',
     title: 'Upcoming spawns',
     description: 'The timeline shows the next monsters to spawn.'
+  },
+  {
+    icon: '✨',
+    title: 'Spells',
+    description: 'Every turn a new spell card appears below the board until all slots are full. Tap a card to buy it with gold, then pick its targets. Hold a card to read what it does.'
   }
 ]
 const tutorialStep = ref(0)

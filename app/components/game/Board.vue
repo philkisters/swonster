@@ -1,6 +1,7 @@
 <template>
   <div
     class="game-board"
+    :class="{ 'game-board--targeting': targeting }"
     role="grid"
     :aria-label="`${state.width} by ${state.height} monster game board`"
     :style="{ '--board-width': state.width, '--board-height': state.height }"
@@ -25,23 +26,75 @@
         'board-cell--attack-up': getAttackAnimation(monster)?.direction === 'up',
         'board-cell--attack-down': getAttackAnimation(monster)?.direction === 'down',
         'board-cell--attack-left': getAttackAnimation(monster)?.direction === 'left',
-        'board-cell--attack-right': getAttackAnimation(monster)?.direction === 'right'
+        'board-cell--attack-right': getAttackAnimation(monster)?.direction === 'right',
+        'board-cell--targetable': targetableCells.has(index),
+        'board-cell--chosen': chosenCells.has(index),
+        'board-cell--dimmed': isDimmed(index),
+        'board-cell--line-preview': previewCells.has(index)
       }"
       role="gridcell"
+      :tabindex="targetableCells.has(index) ? 0 : undefined"
       :aria-label="monster
         ? `${getMonsterDefinition(monster.typeId).name}, ${monster.faction === 'player' ? 'Ally' : 'Enemy'}, tier ${monster.tier}, HP ${monster.hp} of ${monster.maxHp}, attack ${monster.atk}`
         : 'Empty'"
       @animationend="onAnimationEnd($event, monster)"
+      @click="pickCell(index)"
+      @keydown.enter.space.prevent="pickCell(index)"
     >
       <MonsterField v-if="monster" :monster="monster" />
+      <UIcon
+        v-else-if="targetableCells.has(index)"
+        name="lucide:plus"
+        class="board-cell-free"
+        aria-hidden="true"
+      />
+      <span
+        v-if="chosenCells.has(index)"
+        class="board-cell-order"
+        aria-hidden="true"
+      >{{ chosenCells.get(index) }}</span>
+      <img
+        v-if="spellEffect?.cells.includes(index)"
+        :key="spellEffect.id"
+        class="board-spell-burst"
+        :src="spriteUrl(getSpellSprite(spellEffect.spellId))"
+        alt=""
+        draggable="false"
+        @animationend.stop="emit('spellEffectDone')"
+      >
     </div>
+    <button
+      v-for="line in lineOptions"
+      :key="`${line.shape}-${line.index}`"
+      type="button"
+      class="board-line-handle"
+      :class="{
+        'board-line-handle--row': line.shape === 'row',
+        'board-line-handle--column': line.shape === 'column'
+      }"
+      :style="{ '--line': line.index }"
+      :aria-label="`${line.shape === 'row' ? 'Row' : 'Column'} ${line.index + 1}`"
+      @pointerenter="previewLine = line"
+      @pointerleave="previewLine = null"
+      @focus="previewLine = line"
+      @blur="previewLine = null"
+      @click="emit('pick', line)"
+    >
+      <UIcon
+        :name="line.shape === 'row' ? 'lucide:chevrons-right' : 'lucide:chevrons-down'"
+        aria-hidden="true"
+      />
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { getMonsterDefinition } from '~~/game/config'
 import { getDirectionFromSwipe } from '~~/game/input'
-import type { Direction, Monster } from '~~/game/types'
+import { getSpellSprite } from '~~/game/spells'
+import { getTargetCells, isSameTarget } from '~~/game/targeting'
+import type { Target } from '~~/game/targeting'
+import type { Direction, Monster, SpellId } from '~~/game/types'
 
 interface BoardState {
   width: number
@@ -56,13 +109,28 @@ interface AttackAnimation {
   phase: 'attack' | 'counter'
 }
 
+interface Targeting {
+  options: readonly Target[]
+  chosen: readonly Target[]
+}
+
+interface SpellEffect {
+  id: number
+  spellId: SpellId
+  cells: readonly number[]
+}
+
 const props = defineProps<{
   state: BoardState
   attackAnimations: readonly AttackAnimation[]
   mergeAnimations: readonly string[]
+  targeting?: Targeting | null
+  spellEffect?: SpellEffect | null
 }>()
 const emit = defineEmits<{
   move: [direction: Direction]
+  pick: [target: Target]
+  spellEffectDone: []
   attackAnimationsDone: []
   mergeAnimationsDone: []
   spawnAnimationDone: []
@@ -75,6 +143,35 @@ const completedAttackers = new Set<string>()
 const completedMerges = new Set<string>()
 const mergedMonsterIds = computed(() => new Set(props.mergeAnimations))
 const pointerStart = ref<{ id: number, x: number, y: number } | null>(null)
+const spriteUrl = useSpriteUrl()
+const previewLine = ref<Target | null>(null)
+
+const targetableCells = computed(() => new Set(getCellIndices(props.targeting?.options)))
+const chosenCells = computed(() => new Map(
+  getCellIndices(props.targeting?.chosen).map((index, order) => [index, order + 1] as const)
+))
+const lineOptions = computed(() => props.targeting?.options.filter(target => target.shape !== 'cell') ?? [])
+const previewCells = computed(() => {
+  const line = lineOptions.value.find(option => previewLine.value && isSameTarget(option, previewLine.value))
+
+  return new Set(line ? getTargetCells(props.state, line) : [])
+})
+
+function getCellIndices(targets: readonly Target[] = []): number[] {
+  return targets.flatMap(target => target.shape === 'cell' ? [target.index] : [])
+}
+
+function isDimmed(index: number): boolean {
+  return targetableCells.value.size > 0
+    && !targetableCells.value.has(index)
+    && !chosenCells.value.has(index)
+}
+
+function pickCell(index: number) {
+  if (targetableCells.value.has(index) || chosenCells.value.has(index)) {
+    emit('pick', { shape: 'cell', index })
+  }
+}
 
 watch(
   () => `${props.state.turn}:${props.attackAnimations.map(({ monsterId, phase }) => `${phase}-${monsterId}`).join('|')}`,
@@ -88,6 +185,7 @@ function getAttackAnimation(monster: Monster | null): AttackAnimation | undefine
 }
 
 function onPointerDown(event: PointerEvent) {
+  if (props.targeting) return
   if (event.pointerType === 'mouse' && event.button !== 0) return
 
   pointerStart.value = {
@@ -154,6 +252,7 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   grid-template-columns: repeat(var(--board-width), minmax(0, 1fr));
   grid-template-rows: repeat(var(--board-height), minmax(0, 1fr));
   gap: var(--board-gap);
+  position: relative;
   width: min(100%, 34rem);
   aspect-ratio: 1;
   padding: var(--board-gap);
@@ -237,6 +336,169 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   --attack-y: 0;
 }
 
+.board-cell {
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
+}
+
+.board-cell--dimmed {
+  filter: grayscale(0.7);
+  opacity: 0.4;
+}
+
+.board-cell--targetable,
+.board-cell--chosen {
+  z-index: 1;
+  cursor: pointer;
+  outline: none;
+}
+
+.board-cell--targetable::after,
+.board-cell--chosen::after,
+.board-cell--line-preview::after {
+  position: absolute;
+  z-index: 3;
+  border: 3px solid var(--game-target);
+  border-radius: inherit;
+  content: "";
+  inset: -2px;
+  pointer-events: none;
+}
+
+.board-cell--targetable::after {
+  animation: board-target-pulse 1.1s ease-in-out infinite;
+}
+
+.board-cell--targetable:hover::after,
+.board-cell--targetable:focus-visible::after {
+  background: color-mix(in srgb, var(--game-target) 22%, transparent);
+  animation: none;
+}
+
+.board-cell--chosen::after {
+  background: color-mix(in srgb, var(--game-target) 22%, transparent);
+}
+
+.board-cell--line-preview::after {
+  border-width: 0;
+  background: color-mix(in srgb, var(--game-target) 28%, transparent);
+  inset: 0;
+}
+
+.board-cell-free {
+  width: 40%;
+  height: 40%;
+  color: var(--game-target);
+  opacity: 0.75;
+}
+
+.board-cell-order {
+  position: absolute;
+  top: -0.35rem;
+  left: -0.35rem;
+  z-index: 4;
+  display: grid;
+  width: 1.4rem;
+  height: 1.4rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--game-target);
+  color: var(--ui-bg);
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.board-spell-burst {
+  position: absolute;
+  z-index: 5;
+  width: 84%;
+  height: 84%;
+  inset: 8%;
+  object-fit: contain;
+  pointer-events: none;
+  animation: board-spell-burst 560ms ease-out both;
+}
+
+.board-line-handle {
+  --line-centre: calc(
+    var(--board-gap) * (var(--line) + 1)
+    + (100% - var(--board-gap) * (var(--line-count) + 1)) / var(--line-count) * (var(--line) + 0.5)
+  );
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  place-items: center;
+  border: 2px solid var(--ui-bg);
+  border-radius: 50%;
+  background: var(--game-target);
+  color: var(--ui-bg);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  animation: board-handle-pulse 1.1s ease-in-out infinite;
+}
+
+.board-line-handle:hover,
+.board-line-handle:focus-visible {
+  outline: none;
+  animation: none;
+  scale: 1.2;
+}
+
+.board-line-handle--row {
+  --line-count: var(--board-height);
+  top: var(--line-centre);
+  left: 0;
+}
+
+.board-line-handle--column {
+  --line-count: var(--board-width);
+  top: 0;
+  left: var(--line-centre);
+}
+
+@keyframes board-target-pulse {
+  0%, 100% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+    scale: 1.05;
+  }
+}
+
+@keyframes board-handle-pulse {
+  0%, 100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.18;
+  }
+}
+
+@keyframes board-spell-burst {
+  0% {
+    opacity: 0;
+    scale: 0.4;
+  }
+
+  25%, 65% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.35;
+  }
+}
+
 .board-cell:hover .monster-tooltip {
   transform: translate(-50%, 0);
   opacity: 1;
@@ -263,6 +525,15 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   .board-cell--merged {
     animation-duration: 1ms;
     animation-delay: 0ms;
+  }
+
+  .board-cell--targetable::after,
+  .board-line-handle {
+    animation: none;
+  }
+
+  .board-spell-burst {
+    animation-duration: 1ms;
   }
 }
 </style>

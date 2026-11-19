@@ -1,5 +1,5 @@
 import { canMerge, mergeMonsters } from './merging'
-import { FRIENDLY_MERGE_SCORE, FRIENDLY_MERGE_SCORE_MULTIPLIER } from './config'
+import { getFriendlyMergeScore } from './config'
 import type { Direction, GameEvent, GameState } from './types'
 
 function getTraversalOrder(state: GameState, direction: Direction): number[] {
@@ -70,7 +70,7 @@ export function slideAndMerge(
         const result = mergeMonsters(blocker, monster, state.turn + 1, next)
         cells[next] = result.monster
         if (monster.faction === 'player') {
-          mergeScore += FRIENDLY_MERGE_SCORE * FRIENDLY_MERGE_SCORE_MULTIPLIER ** (monster.tier - 1)
+          mergeScore += getFriendlyMergeScore(monster.tier)
         }
         mergedAt.add(next)
         if (from !== next) {

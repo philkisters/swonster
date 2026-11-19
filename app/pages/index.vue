@@ -23,6 +23,10 @@
               :state="state"
               :attack-animations="attackAnimations"
               :merge-animations="mergeAnimations"
+              :targeting="targeting"
+              :spell-effect="spellEffect"
+              @pick="pickTarget"
+              @spell-effect-done="finishSpellEffect"
               @merge-animations-done="finishMergeAnimations"
               @attack-animations-done="finishAttackAnimations"
               @spawn-animation-done="finishSpawnAnimation"
@@ -48,12 +52,19 @@
               <button
                 type="button"
                 class="game-over-restart"
-                @click="restart"
+                @click="restartGame"
               >
                 New game
               </button>
             </section>
           </div>
+          <GameSpellBar
+            :cards="spellCards"
+            :targeting="targeting"
+            :disabled="showTutorial || state.gameOver"
+            @select="selectSpell"
+            @cancel="cancelSpell"
+          />
           <section
             v-if="!state.gameOver && state.cells.every(monster => monster !== null)"
             class="game-over-card"
@@ -63,13 +74,13 @@
             <div>
               <h2>Board full</h2>
               <p>
-                Make room with your next move or start a new game.
+                Make room with your next move or a spell, or start a new game.
               </p>
             </div>
             <button
               type="button"
               class="game-over-restart"
-              @click="restart"
+              @click="restartGame"
             >
               New game
             </button>
@@ -90,18 +101,35 @@ const {
   spawnHistory,
   attackAnimations,
   mergeAnimations,
+  spellEffect,
+  isAnimating,
   move,
+  cast,
   restart,
   finishMergeAnimations,
   finishAttackAnimations,
-  finishSpawnAnimation
+  finishSpawnAnimation,
+  finishSpellEffect
 } = useGame()
 
+const {
+  cards: spellCards,
+  targeting,
+  select: selectSpell,
+  pick: pickTarget,
+  cancel: cancelSpell
+} = useSpellCasting(state, isAnimating, cast)
+
 function moveWhenReady(direction: Direction) {
-  if (!showTutorial.value) move(direction)
+  if (!showTutorial.value && !targeting.value) move(direction)
 }
 
-useGameInput(moveWhenReady)
+function restartGame() {
+  cancelSpell()
+  restart()
+}
+
+useGameInput(moveWhenReady, cancelSpell)
 </script>
 
 <style>
@@ -119,6 +147,7 @@ useGameInput(moveWhenReady)
   --game-score-text: var(--ui-text-highlighted);
   --game-gold-text: var(--ui-color-warning-600);
   --game-xp-text: var(--ui-color-success-600);
+  --game-target: var(--ui-text-highlighted);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;

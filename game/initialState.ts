@@ -1,5 +1,6 @@
 import { BOARD_HEIGHT, BOARD_WIDTH, getMonsterDefinition, getMonsterStats } from './config'
 import { createSpawnQueue } from './spawning'
+import { createSpellSlots, refillSpellSlot } from './spellSlots'
 import type { GameState, Monster } from './types'
 
 function createMonster(id: string, typeId: string): Monster {
@@ -44,6 +45,7 @@ export function createInitialState(seed?: number): GameState {
     xp: 0,
     enemyTierUnlockTurn: null,
     gameOver: false,
-    ...spawnState
+    ...spawnState,
+    ...refillSpellSlot(createSpellSlots(seed))
   }
 }
