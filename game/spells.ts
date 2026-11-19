@@ -27,11 +27,11 @@ export interface SpellResult {
 }
 
 function fireball(state: GameState, target: Target): GameState {
-  return damageEnemies(state, [target.index], FIREBALL_DAMAGE)
+  return damage(state, [target.index], FIREBALL_DAMAGE)
 }
 
 function fireballBarrage(state: GameState, line: Target): GameState {
-  return damageEnemies(state, getTargetCells(state, line), FIREBALL_BARRAGE_DAMAGE)
+  return damage(state, getTargetCells(state, line), FIREBALL_BARRAGE_DAMAGE)
 }
 
 function move(state: GameState, from: Target, to: Target): GameState {
@@ -82,15 +82,15 @@ function evolve(state: GameState, target: Target): GameState {
 export const SPELLS: Record<SpellId, SpellDefinition> = {
   fireball: {
     name: 'Fireball',
-    description: `Deals ${FIREBALL_DAMAGE} damage to one enemy.`,
+    description: `Deals ${FIREBALL_DAMAGE} damage to any monster, friend or foe.`,
     cost: 5,
-    targets: [{ kind: 'enemyMonster', prompt: 'Pick an enemy to burn' }],
+    targets: [{ kind: 'anyMonster', prompt: 'Pick a monster to burn' }],
     cast: fireball
   },
   // TODO: scale fireball barrage damage
   fireballBarrage: {
     name: 'Fireball Barrage',
-    description: `Deals ${FIREBALL_BARRAGE_DAMAGE} damage to every enemy in a row or column.`,
+    description: `Deals ${FIREBALL_BARRAGE_DAMAGE} damage to every monster, friend or foe, in a row or column with an enemy.`,
     cost: 20,
     targets: [{ kind: 'enemyLine', prompt: 'Pick a row or column to bombard' }],
     cast: fireballBarrage
@@ -238,16 +238,22 @@ function withCells(state: GameState, ...changes: [index: number, monster: Monste
   return { ...state, cells }
 }
 
-function damageEnemies(state: GameState, indices: number[], damage: number): GameState {
+function damage(state: GameState, indices: number[], damage: number): GameState {
   let next = state
 
   for (const index of indices) {
     const monster = state.cells[index]
-    if (monster?.faction !== 'enemy') continue
+    if (monster == null) continue
 
-    next = monster.hp > damage
-      ? withCells(next, [index, { ...monster, hp: monster.hp - damage }])
-      : rewardDefeat(withCells(next, [index, null]), monster)
+    if (monster.hp > damage) {
+      next = withCells(next, [index, { ...monster, hp: monster.hp - damage }])
+      continue
+    }
+
+    next = withCells(next, [index, null])
+    if (monster.faction === 'enemy') {
+      next = rewardDefeat(next, monster)
+    }
   }
 
   return next

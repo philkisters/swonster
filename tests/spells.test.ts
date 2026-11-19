@@ -62,7 +62,7 @@ describe('buying spells', () => {
 
     expect(castSpell(broke, 0, [cell(1)])).toEqual({ state: broke, valid: false })
     expect(castSpell(state, 1, [cell(1)]).valid).toBe(false)
-    expect(castSpell(state, 0, [cell(0)]).valid).toBe(false)
+    expect(castSpell(state, 0, [cell(2)]).valid).toBe(false)
     expect(castSpell(state, 0, []).valid).toBe(false)
     expect(castSpell({ ...state, gameOver: true }, 0, [cell(1)]).valid).toBe(false)
   })
@@ -85,22 +85,56 @@ describe('spell effects', () => {
     expect(killed.xp).toBeGreaterThan(0)
   })
 
-  it('fireball barrage damages every enemy in the line and spares allies', () => {
+  it('fireball damages and defeats own monsters without a reward', () => {
+    const tough = createMonster('tough', 'player')
+    const weak = createMonster('weak', 'player', { hp: FIREBALL_DAMAGE })
+    const state = createState('fireball', [[0, tough], [1, weak]])
+
+    const wounded = castSpell(state, 0, [cell(0)]).state
+    const killed = castSpell(state, 0, [cell(1)]).state
+
+    expect(wounded.cells[0]?.hp).toBe(tough.hp - FIREBALL_DAMAGE)
+    expect(killed.cells[1]).toBeNull()
+    expect(killed.cells[0]).toBe(tough)
+    expect(killed.gold).toBe(STARTING_GOLD - SPELLS.fireball.cost)
+    expect(killed.score).toBe(0)
+    expect(killed.xp).toBe(0)
+  })
+
+  it('fireball barrage damages every monster in the line, friend or foe', () => {
     const ally = createMonster('ally', 'player')
+    const bystander = createMonster('enemy-3', 'enemy')
     const state = createState('fireballBarrage', [
       [3, createMonster('enemy-1', 'enemy')],
       [4, ally],
       [5, createMonster('enemy-2', 'enemy', { hp: 1 })],
-      [8, createMonster('enemy-3', 'enemy')]
+      [8, bystander]
     ])
 
     const result = castSpell(state, 0, [{ shape: 'row', index: 1 }]).state
 
     expect(result.cells[3]?.hp).toBe(6 - FIREBALL_BARRAGE_DAMAGE)
-    expect(result.cells[4]).toBe(ally)
+    expect(result.cells[4]?.hp).toBe(ally.hp - FIREBALL_BARRAGE_DAMAGE)
     expect(result.cells[5]).toBeNull()
-    expect(result.cells[8]?.hp).toBe(6)
+    expect(result.cells[8]).toBe(bystander)
     expect(castSpell(state, 0, [{ shape: 'row', index: 0 }]).valid).toBe(false)
+  })
+
+  it('fireball barrage rewards only the enemies it defeats', () => {
+    const state = createState('fireballBarrage', [
+      [3, createMonster('ally', 'player', { hp: FIREBALL_BARRAGE_DAMAGE })],
+      [4, createMonster('enemy', 'enemy', { hp: FIREBALL_BARRAGE_DAMAGE })],
+      [5, createMonster('ally-2', 'player', { hp: 1 })]
+    ])
+    const enemyOnly = createState('fireballBarrage', [[4, createMonster('enemy', 'enemy', { hp: FIREBALL_BARRAGE_DAMAGE })]])
+
+    const result = castSpell(state, 0, [{ shape: 'row', index: 1 }]).state
+    const expected = castSpell(enemyOnly, 0, [{ shape: 'row', index: 1 }]).state
+
+    expect(result.cells.every(monster => monster === null)).toBe(true)
+    expect(result.gold).toBe(STARTING_GOLD - SPELLS.fireballBarrage.cost + 1)
+    expect(result.score).toBe(expected.score)
+    expect(result.xp).toBe(expected.xp)
   })
 
   it('move relocates only own monsters, super move any monster', () => {
