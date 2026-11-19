@@ -27,7 +27,7 @@
       </form>
       <button
         type="button"
-        class="game-menu-button primary"
+        class="game-menu-button-primary"
         :disabled="loading"
         @click="startGame"
       >
@@ -35,7 +35,7 @@
       </button>
       <button
         type="button"
-        class="game-menu-button secondary"
+        class="game-menu-button-secondary"
         :disabled="loading"
       >
         History (soon)
@@ -43,7 +43,7 @@
       
       <button
         type="button"
-        class="game-menu-button secondary"
+        class="game-menu-button-secondary"
         :disabled="loading"
       >
         High Scores (soon)
@@ -53,7 +53,7 @@
       <button type="button" @click="connect()">
         Retry connection
       </button>
-      <button type="button" class="game-menu-button primary" @click="startGame">
+      <button type="button" class="game-menu-button-primary" @click="startGame">
         Play without saving
       </button>
     </template>
@@ -122,16 +122,17 @@ onMounted(() => void connect())
   cursor: wait;
 }
 
-.game-menu-button {
+.game-menu-button-primary {
   border: 0;
   font-weight: 750;
-  &.primary {
-    background: var(--game-accent-strong);
-    color: var(--ui-text-inverted);
-  }
-  &.secondary {
-    border: 1px solid var(--game-gold-text);
-  }
+  background: var(--game-accent-strong);
+  color: var(--ui-text-inverted);
+}
+  
+.game-menu-button-secondary {
+  border: 0;
+  font-weight: 750;
+  border: 1px solid var(--game-gold-text);
 }
 
 .game-menu-error {
