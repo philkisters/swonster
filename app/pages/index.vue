@@ -37,7 +37,7 @@
         type="button"
         class="game-menu-button-secondary"
         :disabled="loading"
-        @click="router.push('/history')"
+        @click="router.push('/scores')"
       >
         History
       </button>
@@ -46,7 +46,7 @@
         type="button"
         class="game-menu-button-secondary"
         :disabled="loading"
-        @click="router.push({ path: '/history', query: { view: 'best' } })"
+        @click="router.push({ path: '/scores', query: { view: 'best-personal' } })"
       >
         High Scores
       </button>

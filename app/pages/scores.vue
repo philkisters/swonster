@@ -1,24 +1,24 @@
 <template>
-  <section class="game-history-page" aria-labelledby="history-title">
-    <header class="game-history-header">
+  <section class="game-score-page" aria-labelledby="score-title">
+    <header class="game-score-header">
       <button
         type="button"
-        class="game-history-back"
+        class="game-score-back"
         aria-label="Back to menu"
         @click="router.push('/')"
       >
         <UIcon name="i-lucide-chevron-left" />
       </button>
       <GameLogo />
-      <h1 id="history-title">History</h1>
+      <h1 id="score-title">Scores</h1>
     </header>
 
-    <div class="game-history-switcher" role="group" aria-label="History order">
+    <div class="game-score-switcher" role="group" aria-label="History order">
       <button
         v-for="option in options"
         :key="option.value"
         type="button"
-        :class="{ 'game-history-switcher-active': view === option.value }"
+        :class="{ 'game-score-switcher-active': view === option.value }"
         :aria-pressed="view === option.value"
         @click="view = option.value"
       >
@@ -27,21 +27,24 @@
     </div>
 
     <MenuLoading v-if="loading" text="Loading games..." :size="8" />
-    <p v-else-if="historyError" class="game-history-error" role="alert">
+    <p v-else-if="historyError" class="game-score-error" role="alert">
       {{ historyError }}
     </p>
-    <p v-else-if="games.length === 0" class="game-history-empty">
+    <p v-else-if="games.length === 0" class="game-score-empty">
       {{ view === 'latest' ? 'You have not played any saved games yet.' : 'Finish a game to set your first high score.' }}
     </p>
-    <ol v-else class="game-history-list">
+    <ol v-else class="game-score-list">
       <li
         v-for="game in games"
         :key="game.id"
-        class="game-history-card"
-        :class="{ 'game-history-card-incomplete': isIncomplete(game) }"
+        class="game-score-card"
+        :class="{ 'game-score-card-incomplete': isIncomplete(game) }"
       >
-        <div class="game-history-result">
-          <div class="game-history-score">
+        <div class="game-score-result">
+          <div v-if="view === 'best-global'"  class="text-xl font-semibold">
+            {{ game.username ?? 'Unknown player' }}
+          </div>
+          <div class="game-score-score">
             <img
               :src="`${app.baseURL}sprites/ui/score.png`"
               alt=""
@@ -53,7 +56,7 @@
               <strong>{{ game.highScore }}</strong>
             </span>
           </div>
-          <div class="game-history-turn">
+          <div class="game-score-turn">
             <img
               :src="`${app.baseURL}sprites/ui/turn.png`"
               alt=""
@@ -66,7 +69,7 @@
             </span>
           </div>
         </div>
-        <div class="game-history-meta">
+        <div class="game-score-meta">
           <span>
             {{ isIncomplete(game) ? 'Started' : 'Finished' }}
             {{ formatDate(displayTime(game)) }}
@@ -83,14 +86,20 @@ import type { GameHistoryEntry, HistoryOrder } from '~/composables/useGameTracki
 
 const options: { value: HistoryOrder, label: string }[] = [
   { value: 'latest', label: 'Latest' },
-  { value: 'best', label: 'Best' }
+  { value: 'best-personal', label: 'Personal' },
+  { value: 'best-global', label: 'Global' }
 ]
 
 const route = useRoute()
 const router = useRouter()
 const { app } = useRuntimeConfig()
 const { connect, loadHistory } = useGameTracking()
-const view = ref<HistoryOrder>(route.query.view === 'best' ? 'best' : 'latest')
+const requestedView = route.query.view
+const view = ref<HistoryOrder>(
+  requestedView === 'best-personal' || requestedView === 'best'
+    ? 'best-personal'
+    : requestedView === 'best-global' ? 'best-global' : 'latest',
+)
 const games = ref<GameHistoryEntry[]>([])
 const loading = ref(true)
 const historyError = ref('')
@@ -150,32 +159,32 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.game-history-page {
+.game-score-page {
   display: grid;
   width: min(100%, 34rem);
   align-self: start;
   gap: 1.25rem;
 }
 
-.game-history-header {
+.game-score-header {
   display: grid;
   grid-template-columns: 2.5rem 4rem minmax(0, 1fr);
   align-items: center;
   gap: 0.75rem;
 }
 
-.game-history-header h1 {
+.game-score-header h1 {
   margin: 0;
   font-size: clamp(1.5rem, 6vw, 2rem);
   font-weight: 850;
 }
 
-.game-history-header :deep(.game-logo) {
+.game-score-header :deep(.game-logo) {
   width: 4rem;
   height: 4rem;
 }
 
-.game-history-back {
+.game-score-back {
   display: grid;
   width: 2.5rem;
   height: 2.5rem;
@@ -186,37 +195,39 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-.game-history-back svg {
+.game-score-back svg {
   width: 1.5rem;
   height: 1.5rem;
 }
 
-.game-history-switcher {
+.game-score-switcher {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 0.25rem;
   border: 1px solid var(--ui-border);
   border-radius: 0.8rem;
   background: var(--ui-bg-muted);
 }
 
-.game-history-switcher button {
-  padding: 0.65rem 1rem;
+.game-score-switcher button {
+  min-width: 0;
+  padding: 0.65rem 0.5rem;
   border: 0;
   border-radius: 0.6rem;
   background: transparent;
   color: var(--ui-text-muted);
   font-weight: 750;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.game-history-switcher .game-history-switcher-active {
+.game-score-switcher .game-score-switcher-active {
   background: var(--ui-bg-elevated);
   box-shadow: 0 0.2rem 0.8rem color-mix(in srgb, var(--ui-color-primary-950) 8%, transparent);
   color: var(--ui-text-highlighted);
 }
 
-.game-history-list {
+.game-score-list {
   display: grid;
   gap: 0.75rem;
   margin: 0;
@@ -224,7 +235,7 @@ onMounted(async () => {
   list-style: none;
 }
 
-.game-history-card {
+.game-score-card {
   display: grid;
   gap: 0.75rem;
   padding: 1rem 1.1rem;
@@ -234,40 +245,40 @@ onMounted(async () => {
   box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--ui-color-primary-950) 5%, transparent);
 }
 
-.game-history-card-incomplete {
+.game-score-card-incomplete {
   border-color: var(--game-damage-text);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--game-damage-text) 18%, transparent),
     0 0.5rem 1.5rem color-mix(in srgb, var(--ui-color-primary-950) 5%, transparent);
 }
 
-.game-history-result {
+.game-score-result {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1.25rem;
 }
 
-.game-history-score,
-.game-history-turn {
+.game-score-score,
+.game-score-turn {
   display: flex;
   align-items: center;
   gap: 0.6rem;
 }
 
-.game-history-score img,
-.game-history-turn img {
+.game-score-score img,
+.game-score-turn img {
   width: 2rem;
   height: 2rem;
   object-fit: contain;
 }
 
-.game-history-score span,
-.game-history-turn span {
+.game-score-score span,
+.game-score-turn span {
   display: grid;
 }
 
-.game-history-card small {
+.game-score-card small {
   color: var(--ui-text-muted);
   font-size: 0.65rem;
   font-weight: 850;
@@ -275,19 +286,19 @@ onMounted(async () => {
   text-transform: uppercase;
 }
 
-.game-history-card strong {
+.game-score-card strong {
   color: var(--ui-text-highlighted);
   font-size: 1.35rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
-.game-history-turn strong {
+.game-score-turn strong {
   color: var(--game-turn-text);
   text-align: right;
 }
 
-.game-history-meta {
+.game-score-meta {
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
@@ -298,27 +309,27 @@ onMounted(async () => {
   font-variant-numeric: tabular-nums;
 }
 
-.game-history-meta span:last-child {
+.game-score-meta span:last-child {
   flex: 0 0 auto;
 }
 
-.game-history-error {
+.game-score-error {
   color: var(--game-damage-text);
   text-align: center;
 }
 
-.game-history-empty {
+.game-score-empty {
   margin: 1rem 0;
   color: var(--ui-text-muted);
   text-align: center;
 }
 
 @media (max-width: 400px) {
-  .game-history-card {
+  .game-score-card {
     padding: 0.85rem;
   }
 
-  .game-history-meta {
+  .game-score-meta {
     flex-direction: column;
     gap: 0.25rem;
   }

@@ -26,6 +26,7 @@ vi.mock('firebase/auth', () => ({
 vi.mock('firebase/firestore', () => ({
   getFirestore: () => ({}),
   collection: (_db: unknown, ...parts: string[]) => ({ path: parts.join('/') }),
+  collectionGroup: (_db: unknown, name: string) => ({ path: name }),
   doc: (parent: { path?: string }, ...parts: string[]) => ({
     path: [parent.path, ...parts, ...(parts.length ? [] : ['new-game'])]
       .filter(Boolean)
@@ -108,6 +109,7 @@ describe('game tracking', () => {
       },
     ])
     expect(firebase.batchUpdate.mock.calls[1][1]).toMatchObject({
+      username: 'anonymous-swonster#abcde',
       turn: 1,
       score: 9,
       highScore: 12,
@@ -213,13 +215,55 @@ describe('game tracking', () => {
       })),
     })
 
-    const best = await tracking.loadHistory('best')
+    const best = await tracking.loadHistory('best-personal')
     expect(best).toHaveLength(10)
     expect(best[0]?.id).toBe('game-11')
     expect(best[9]?.id).toBe('game-2')
     expect(firebase.getDocs.mock.calls[1][0]).toMatchObject({
       constraints: [
         { type: 'where', values: ['status', '==', 'game-over'] },
+        { type: 'orderBy', values: ['highScore', 'desc'] },
+        { type: 'limit', value: 10 },
+      ],
+    })
+  })
+
+  it('loads the global top ten with usernames', async () => {
+    const tracking = useGameTracking()
+    await tracking.connect()
+    firebase.getDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'global-game',
+          data: () => ({
+            username: 'Champion',
+            startTime: 10,
+            endTime: 100,
+            turn: 20,
+            highScore: 500,
+            status: 'game-over',
+          }),
+        },
+      ],
+    })
+
+    await expect(tracking.loadHistory('best-global')).resolves.toEqual([
+      {
+        id: 'global-game',
+        username: 'Champion',
+        startTime: 10,
+        endTime: 100,
+        turn: 20,
+        highScore: 500,
+        status: 'game-over',
+      },
+    ])
+    expect(firebase.getDocs.mock.calls[0][0]).toMatchObject({
+      source: { path: 'games' },
+      constraints: [
+        { type: 'where', values: ['status', '==', 'game-over'] },
+        { type: 'orderBy', values: ['highScore', 'desc'] },
+        { type: 'limit', value: 10 },
       ],
     })
   })

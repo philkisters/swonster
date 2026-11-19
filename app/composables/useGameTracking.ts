@@ -2,6 +2,7 @@ import { getApps, initializeApp } from 'firebase/app'
 import { getAuth, signInAnonymously } from 'firebase/auth'
 import {
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -18,10 +19,11 @@ import type { DocumentReference, Firestore } from 'firebase/firestore'
 import type { GameState } from '~~/game/types'
 import type { GameAction } from './useGame'
 
-export type HistoryOrder = 'latest' | 'best'
+export type HistoryOrder = 'latest' | 'best-personal' | 'best-global'
 
 export interface GameHistoryEntry {
   id: string
+  username?: string
   startTime: number
   endTime: number | null
   turn: number
@@ -157,34 +159,51 @@ export function useGameTracking() {
       throw new Error('Connect to Firebase before loading your history.')
     }
 
-    const games = collection(database, 'players', playerId, 'games')
-    const historyQuery =
-      order === 'latest'
-        ? query(games, orderBy('startTime', 'desc'), limit(10))
-        : query(games, where('status', '==', 'game-over'))
+    const games = order === 'best-global'
+      ? collectionGroup(database, 'games')
+      : collection(database, 'players', playerId, 'games')
+    const historyQuery = order === 'latest'
+      ? query(games, orderBy('startTime', 'desc'), limit(10))
+      : query(
+          games,
+          where('status', '==', 'game-over'),
+          orderBy('highScore', 'desc'),
+          limit(10),
+        )
     const snapshot = await getDocs(historyQuery)
-    const entries = snapshot.docs.map((entry) => {
+    const entries = await Promise.all(snapshot.docs.map(async (entry) => {
       const data = entry.data()
       const startTime = typeof data.startTime === 'number' ? data.startTime : 0
       const endTime = typeof data.endTime === 'number' ? data.endTime : null
       const turn = typeof data.turn === 'number' ? data.turn : 0
       const highScore = typeof data.highScore === 'number' ? data.highScore : 0
       const status = typeof data.status === 'string' ? data.status : 'active'
+      let username = typeof data.username === 'string' ? data.username : undefined
+
+      // Games saved before global scores were added do not contain a username copy.
+      if (order === 'best-global' && !username && entry.ref.parent.parent) {
+        const player = await getDoc(entry.ref.parent.parent)
+        const profileName = player.data()?.username
+        if (typeof profileName === 'string') username = profileName
+      }
 
       return {
         id: entry.id,
+        ...(username ? { username } : {}),
         startTime,
         endTime,
         turn,
         highScore,
         status,
       }
-    })
+    }))
 
-    if (order === 'latest') return entries
+    if (order === 'latest') return entries.slice(0, 10)
 
     return entries
-      .sort((first, second) => second.highScore - first.highScore || second.startTime - first.startTime)
+      .sort((first, second) =>
+        second.highScore - first.highScore || second.startTime - first.startTime,
+      )
       .slice(0, 10)
   }
 
@@ -195,6 +214,7 @@ export function useGameTracking() {
     session = { reference, step: 0, highScore: 0, ended: false }
     observeWrite(
       setDoc(reference, {
+        username: savedUsername.value,
         startTime: Date.now(),
         endTime: null,
         turn: 0,
@@ -225,6 +245,7 @@ export function useGameTracking() {
       score: state.score,
     })
     batch.update(session.reference, {
+      username: savedUsername.value,
       turn: state.turn,
       score: state.score,
       highScore: session.highScore,
