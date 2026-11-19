@@ -89,7 +89,7 @@ const tutorialSteps = [
   {
     icon: '✨',
     title: 'Spells',
-    description: 'Every turn a new spell card appears below the board until all slots are full. Tap a card to buy it with gold, then pick its targets. Hold a card to read what it does.'
+    description: 'Every 5 turns a new spell card appears below the board until all slots are full. Tap a card to buy it with gold, then pick its targets. Hold a card to read what it does.'
   }
 ]
 const tutorialStep = ref(0)

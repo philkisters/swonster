@@ -36,6 +36,7 @@ export const FRIENDLY_MERGE_SCORE = 3
 export const FRIENDLY_MERGE_SCORE_MULTIPLIER = 2
 export const ENEMY_TIER_UNLOCK_PLAYER_TIER = 3
 export const SPELL_SLOT_COUNT = 4
+export const SPELL_REFILL_INTERVAL = 10
 
 export const MONSTER_TYPES: Record<string, MonsterTypeDefinition> = {
   dragon: {

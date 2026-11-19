@@ -83,21 +83,22 @@ export const SPELLS: Record<SpellId, SpellDefinition> = {
   fireball: {
     name: 'Fireball',
     description: `Deals ${FIREBALL_DAMAGE} damage to one enemy.`,
-    cost: 2,
+    cost: 5,
     targets: [{ kind: 'enemyMonster', prompt: 'Pick an enemy to burn' }],
     cast: fireball
   },
+  // TODO: scale fireball barrage damage
   fireballBarrage: {
     name: 'Fireball Barrage',
     description: `Deals ${FIREBALL_BARRAGE_DAMAGE} damage to every enemy in a row or column.`,
-    cost: 4,
+    cost: 20,
     targets: [{ kind: 'enemyLine', prompt: 'Pick a row or column to bombard' }],
     cast: fireballBarrage
   },
   move: {
     name: 'Move',
     description: 'Moves one of your monsters to any free cell.',
-    cost: 1,
+    cost: 5,
     targets: [
       { kind: 'ownMonster', prompt: 'Pick one of your monsters' },
       { kind: 'freeCell', prompt: 'Pick a free cell to move it to' }
@@ -107,7 +108,7 @@ export const SPELLS: Record<SpellId, SpellDefinition> = {
   swap: {
     name: 'Swap',
     description: 'Swaps the places of two of your monsters.',
-    cost: 1,
+    cost: 5,
     targets: [
       { kind: 'ownMonster', prompt: 'Pick one of your monsters' },
       { kind: 'ownMonster', prompt: 'Pick another of your monsters to swap with' }
@@ -117,7 +118,7 @@ export const SPELLS: Record<SpellId, SpellDefinition> = {
   superMove: {
     name: 'Super Move',
     description: 'Moves any monster, friend or foe, to any free cell.',
-    cost: 2,
+    cost: 8,
     targets: [
       { kind: 'anyMonster', prompt: 'Pick any monster' },
       { kind: 'freeCell', prompt: 'Pick a free cell to move it to' }
@@ -127,7 +128,7 @@ export const SPELLS: Record<SpellId, SpellDefinition> = {
   superSwap: {
     name: 'Super Swap',
     description: 'Swaps the places of any two monsters, friend or foe.',
-    cost: 3,
+    cost: 8,
     targets: [
       { kind: 'anyMonster', prompt: 'Pick any monster' },
       { kind: 'anyMonster', prompt: 'Pick another monster to swap with' }
@@ -137,14 +138,14 @@ export const SPELLS: Record<SpellId, SpellDefinition> = {
   typeChange: {
     name: 'Type Change',
     description: 'Turns one of your monsters into another type of the same level.',
-    cost: 1,
+    cost: 5,
     targets: [{ kind: 'ownMonster', prompt: 'Pick one of your monsters to transform' }],
     cast: typeChange
   },
   fusion: {
     name: 'Fusion',
     description: 'Fuses two of your monsters of the same level into the next level. The first pick sets the type.',
-    cost: 4,
+    cost: 40,
     targets: [
       { kind: 'ownMonster', prompt: 'Pick the monster that grows' },
       {
@@ -158,14 +159,14 @@ export const SPELLS: Record<SpellId, SpellDefinition> = {
   convertEnemy: {
     name: 'Convert Enemy',
     description: 'Turns one enemy into a monster of yours.',
-    cost: 5,
+    cost: 50,
     targets: [{ kind: 'enemyMonster', prompt: 'Pick an enemy to win over' }],
     cast: convertEnemy
   },
   heal: {
     name: 'Heal',
     description: 'Restores one of your monsters to full health.',
-    cost: 2,
+    cost: 15,
     targets: [{
       kind: 'ownMonster',
       prompt: 'Pick a wounded monster of yours',
@@ -176,7 +177,7 @@ export const SPELLS: Record<SpellId, SpellDefinition> = {
   evolve: {
     name: 'Evolve',
     description: 'Raises one of your monsters to the next level at full health.',
-    cost: 6,
+    cost: 50,
     targets: [{ kind: 'ownMonster', prompt: 'Pick one of your monsters to evolve' }],
     cast: evolve
   }

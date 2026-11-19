@@ -136,11 +136,14 @@ describe('executeTurn movement and merging', () => {
       [3, createMonster('enemy', 'enemy')]
     ])
 
+    const base = getMonsterStats('dragon', 1)
+    const merged = getMonsterStats('dragon', 2)
+
     const result = executeTurn(state, 'right')
 
-    expect(result.stateAfterMovement?.cells[2]).toMatchObject({ tier: 2, hp: 16 })
-    expect(result.stateAfterMovement?.cells[3]?.hp).toBe(8)
-    expect(result.stateAfterActiveAttacks?.cells[3]?.hp).toBe(4)
+    expect(result.stateAfterMovement?.cells[2]).toMatchObject({ tier: 2, hp: merged.maxHp })
+    expect(result.stateAfterMovement?.cells[3]?.hp).toBe(base.maxHp)
+    expect(result.stateAfterActiveAttacks?.cells[3]?.hp).toBe(base.maxHp - merged.atk)
     expect(result.stateAfterMovement?.turn).toBe(1)
   })
 

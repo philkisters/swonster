@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createInitialState } from '../game/initialState'
 import { executeTurn } from '../game/engine'
-import { getMonsterDefinition, getMonsterStats } from '../game/config'
+import { ENEMY_TIER_PROGRESSION, getMonsterDefinition, getMonsterStats } from '../game/config'
 import { nextSpawnEntry, spawnNextMonster } from '../game/spawning'
 import type { GameState, Monster } from '../game/types'
 
@@ -214,32 +214,36 @@ describe('deterministic spawn timeline', () => {
 
   it('increases higher enemy tier chances at decreasing rates and caps them', () => {
     const sample = (turns: number) => {
-      const counts = [0, 0, 0, 0, 0]
+      const counts = new Map<number, number>()
+      let enemies = 0
       let seed = 42
       for (let index = 0; index < 100000; index++) {
         const next = nextSpawnEntry(seed, turns)
         seed = next.rngSeed
-        if (next.entry.kind === 'enemy') counts[next.entry.tier]!++
-        else expect(next.entry.tier).toBe(1)
+        if (next.entry.kind === 'enemy') {
+          enemies++
+          counts.set(next.entry.tier, (counts.get(next.entry.tier) ?? 0) + 1)
+        } else {
+          expect(next.entry.tier).toBe(1)
+        }
       }
-      const total = counts.reduce((sum, count) => sum + count, 0)
-      return counts.map(count => count / total)
+      return ENEMY_TIER_PROGRESSION.map(({ tier }) => (counts.get(tier) ?? 0) / enemies)
     }
+    const expected = (turns: number) =>
+      ENEMY_TIER_PROGRESSION.map(({ chancePerTurn, maxChance }) => Math.min(turns * chancePerTurn, maxChance))
 
     const locked = sample(0)
     const early = sample(25)
     const later = sample(100)
     const capped = sample(1000)
-    expect(locked.slice(2)).toEqual([0, 0, 0])
-    for (const [tier, earlyChance, laterChance, maxChance] of [
-      [2, 0.075, 0.3, 0.3],
-      [3, 0.0375, 0.15, 0.2],
-      [4, 0.0125, 0.05, 0.1]
-    ]) {
-      expect(early[tier]).toBeCloseTo(earlyChance, 2)
-      expect(later[tier]).toBeCloseTo(laterChance, 2)
-      expect(capped[tier]).toBeCloseTo(maxChance, 2)
-    }
+    expect(locked).toEqual(ENEMY_TIER_PROGRESSION.map(() => 0))
+    expect(expected(1000)).toEqual(ENEMY_TIER_PROGRESSION.map(({ maxChance }) => maxChance))
+    ENEMY_TIER_PROGRESSION.forEach((_, index) => {
+      expect(early[index]).toBeCloseTo(expected(25)[index]!, 2)
+      expect(later[index]).toBeCloseTo(expected(100)[index]!, 2)
+      expect(capped[index]).toBeCloseTo(expected(1000)[index]!, 2)
+      expect(later[index]).toBeGreaterThan(early[index]!)
+    })
     expect(sample(1000)).toEqual(capped)
   })
 })

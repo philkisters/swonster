@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { getMonsterStats } from '../game/config'
 import { executeTurn } from '../game/engine'
 import { createSpawnQueue } from '../game/spawning'
 import { createSpellSlots } from '../game/spellSlots'
@@ -197,7 +198,7 @@ describe('executeTurn combat', () => {
     const state = createState(4, 1, [
       [0, createMonster('enemy-a', 'enemy', { movable: true })],
       [1, createMonster('enemy-b', 'enemy', { movable: true })],
-      [3, createMonster('player', 'player', { atk: 16 })]
+      [3, createMonster('player', 'player', { atk: getMonsterStats('dragon', 2).maxHp })]
     ])
 
     const result = executeTurn(state, 'right')

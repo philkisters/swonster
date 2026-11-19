@@ -16,7 +16,7 @@ export function createSpellSlots(seed = DEFAULT_RNG_SEED): SpellSlotState {
 
 /**
  * Deals a random spell that is not on offer yet into the first empty slot.
- * With every slot taken nothing changes, so a spell has to be bought before new ones arrive.
+ * With every slot taken nothing changes, so a spell has to be bought before new ones arrive. The engine calls this every SPELL_REFILL_INTERVAL turns.
  */
 export function refillSpellSlot({ spellSlots, spellRngSeed }: SpellSlotState): SpellSlotState {
   const slot = spellSlots.indexOf(null)

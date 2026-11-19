@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getMonsterStats, SPELL_SLOT_COUNT } from '../game/config'
+import { getMonsterStats, SPELL_REFILL_INTERVAL, SPELL_SLOT_COUNT } from '../game/config'
 import { executeTurn } from '../game/engine'
 import { createInitialState } from '../game/initialState'
 import { createSpawnQueue } from '../game/spawning'
@@ -15,7 +15,9 @@ function createMonster(id: string, faction: Faction, overrides: Partial<Monster>
   return { id, faction, typeId, tier: 1, hp: stats.maxHp, maxHp: stats.maxHp, atk: stats.atk, movable: true, ...overrides }
 }
 
-function createState(spellId: SpellId, monsters: [number, Monster][], gold = 10): GameState {
+const STARTING_GOLD = Math.max(...Object.values(SPELLS).map(spell => spell.cost))
+
+function createState(spellId: SpellId, monsters: [number, Monster][], gold = STARTING_GOLD): GameState {
   const cells: GameState['cells'] = Array(9).fill(null)
   for (const [index, monster] of monsters) {
     cells[index] = monster
@@ -46,7 +48,7 @@ describe('buying spells', () => {
     const result = castSpell(state, 0, [cell(0)])
 
     expect(result.valid).toBe(true)
-    expect(result.state.gold).toBe(10 - SPELLS.heal.cost)
+    expect(result.state.gold).toBe(STARTING_GOLD - SPELLS.heal.cost)
     expect(result.state.spellSlots).toEqual([null, null, null, null])
     expect(result.state.turn).toBe(4)
     expect(result.state.spawnQueue).toBe(state.spawnQueue)
@@ -78,7 +80,7 @@ describe('spell effects', () => {
     expect(wounded.cells[0]?.hp).toBe(12 - FIREBALL_DAMAGE)
     expect(wounded.score).toBe(0)
     expect(killed.cells[1]).toBeNull()
-    expect(killed.gold).toBe(10 - SPELLS.fireball.cost + 1)
+    expect(killed.gold).toBe(STARTING_GOLD - SPELLS.fireball.cost + 1)
     expect(killed.score).toBeGreaterThan(0)
     expect(killed.xp).toBeGreaterThan(0)
   })
@@ -192,15 +194,18 @@ describe('spell effects', () => {
 })
 
 describe('spell slots', () => {
-  it('starts with one spell and deals one more per valid turn', () => {
+  it('starts with one spell and deals one more every few valid turns', () => {
     const state = createInitialState(42)
-    const result = executeTurn(state, 'left')
+    const offTurn = executeTurn(state, 'left')
+    const refillTurn = executeTurn({ ...state, turn: SPELL_REFILL_INTERVAL - 1 }, 'left')
 
     expect(state.spellSlots).toHaveLength(SPELL_SLOT_COUNT)
     expect(state.spellSlots.filter(Boolean)).toHaveLength(1)
-    expect(result.valid).toBe(true)
-    expect(result.state.spellSlots.filter(Boolean)).toHaveLength(2)
-    expect(result.state.spellSlots[0]).toBe(state.spellSlots[0])
+    expect(offTurn.valid).toBe(true)
+    expect(offTurn.state.spellSlots).toEqual(state.spellSlots)
+    expect(offTurn.state.spellRngSeed).toBe(state.spellRngSeed)
+    expect(refillTurn.state.spellSlots.filter(Boolean)).toHaveLength(2)
+    expect(refillTurn.state.spellSlots[0]).toBe(state.spellSlots[0])
   })
 
   it('deals distinct spells deterministically and stops once every slot is taken', () => {
@@ -215,7 +220,7 @@ describe('spell slots', () => {
     expect(refillSpellSlot(refillSpellSlot(createSpellSlots(7)))).toEqual(refillSpellSlot(refillSpellSlot(createSpellSlots(7))))
   })
 
-  it('refills the slot of a bought spell on the next turn', () => {
+  it('refills the slot of a bought spell on the next refill', () => {
     const full = { ...createSpellSlots(7), spellSlots: ['heal', 'move', 'swap', 'evolve'] satisfies SpellId[] }
     const afterPurchase = { ...full, spellSlots: full.spellSlots.with(1, null) }
 
