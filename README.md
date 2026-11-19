@@ -92,7 +92,10 @@ pnpm generate
 
 GitHub Pages deployment is configured in
 `.github/workflows/deploy-pages.yml`. In the repository settings, set
-**Pages** to use **GitHub Actions** as its source.
+**Pages** to use **GitHub Actions** as its source. Configure the four
+`NUXT_PUBLIC_FIREBASE_*` values from `.env.example` as environment variables in
+the `github-pages` environment. They must be present when the static site is
+generated, not only when the Pages artifact is deployed.
 
 ## License
 
