@@ -69,8 +69,8 @@
 import { getMonsterDefinition, getMonsterHeadSprite } from '~~/game/config'
 import type { SpawnEntry } from '~~/game/types'
 
-const SLOT_SCALES = [1, 0.82, 0.68, 0.56, 0.46, 0.36]
-const CURVE_DEPTH = 0.028
+const SLOT_SCALES = [1.4, 1.0, 0.9, 0.8, 0.68, 0.56, 0.46, 0.36]
+const CURVE_DEPTH = 0.02
 const OVERLAP = 0.16
 const VISIBLE_DISTANCE = 4
 const RENDERED_DISTANCE = SLOT_SCALES.length - 1
