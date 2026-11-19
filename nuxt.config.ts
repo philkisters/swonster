@@ -11,11 +11,30 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  runtimeConfig: {
+    public: {
+      firebaseApiKey: '',
+      firebaseAuthDomain: '',
+      firebaseProjectId: '',
+      firebaseAppId: ''
+    }
+  },
+
   routeRules: {
     '/': { prerender: true }
   },
 
   compatibilityDate: '2026-06-30',
+
+  vite: {
+    optimizeDeps: {
+      include: [
+        'firebase/app',
+        'firebase/auth',
+        'firebase/firestore',
+      ]
+    }
+  },
 
   eslint: {
     config: {

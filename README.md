@@ -46,6 +46,22 @@ Start the development server:
 pnpm dev
 ```
 
+## Firebase game tracking
+
+Create a Firebase web app, enable **Anonymous** sign-in in Firebase
+Authentication, and create a Cloud Firestore database. Copy `.env.example` to
+`.env` and fill in the web app's Firebase configuration. Deploy the rules in
+`firestore.rules` using the Firestore console or Firebase CLI before playing.
+
+Each player can access only their own profile and games. Each game stores its
+start time, end time, current turn, score, and highest score, with valid moves
+and spells recorded in order in its `steps` subcollection. Times come from the
+player's device. Restarting or returning to the menu marks an unfinished game
+as abandoned. Closing the page unexpectedly can leave it active and pending
+writes may be lost; the game does not resume saved runs. These client-reported
+scores and actions are not cheat-proof and must not be used as a trusted
+leaderboard. Firestore usage incurs reads and writes for each recorded action.
+
 ## Quality checks
 
 ```bash

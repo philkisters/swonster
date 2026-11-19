@@ -34,9 +34,13 @@ interface PendingTurn {
   spawnedEntry: SpawnEntry | null
 }
 
+export type GameAction
+  = | { type: 'move', direction: Direction }
+    | { type: 'spell', slot: number, spellId: SpellId, targets: Target[] }
+
 const HEALTH_SPELLS: ReadonlySet<SpellId> = new Set(['fireball', 'fireballBarrage', 'heal'])
 
-export function useGame() {
+export function useGame(onAction?: (action: GameAction, state: GameState) => void) {
   const state = ref<GameState>(createInitialState())
   const spawnHistory = ref<SpawnEntry[]>(createSpawnHistory(state.value))
   const attackAnimations = ref<AttackAnimation[]>([])
@@ -60,6 +64,8 @@ export function useGame() {
       attackAnimations.value = []
       return
     }
+
+    onAction?.({ type: 'move', direction }, result.state)
 
     const stateAfterActiveAttacks = result.stateAfterActiveAttacks
       ?? result.stateBeforeSpawn
@@ -154,6 +160,8 @@ export function useGame() {
     const spellId = state.value.spellSlots[slot]
     const result = castSpell(state.value, slot, targets)
     if (!result.valid || !spellId) return
+
+    onAction?.({ type: 'spell', slot, spellId, targets }, result.state)
 
     spellEffect.value = {
       id: ++spellCasts,
