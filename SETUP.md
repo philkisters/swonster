@@ -24,11 +24,13 @@ Authentication, and create a Cloud Firestore database. Copy `.env.example` to
 
 Each player can access only their own profile and games. Each game stores its
 start time, end time, current turn, score, highest score, and actual initial
-seed, with valid moves and spells recorded in order in its `steps`
-subcollection. Times come from the player's device. Restarting or returning to
-the menu marks an unfinished game
-as abandoned. Closing the page unexpectedly can leave it active and pending
-writes may be lost; the game does not resume saved runs. These client-reported
+seed, the latest game state, and valid moves and spells in order in its `steps`
+subcollection. Times come from the player's device. Returning to the menu keeps
+an unfinished game available through **Resume Game**; starting a new game marks
+previous active games as aborted. Games saved before state snapshots were
+introduced cannot be resumed. Pending writes may be lost if the page closes
+unexpectedly. Concurrent sessions cannot overwrite a newer saved state: if a
+save fails, return to the menu and resume the last saved state. These client-reported
 scores and actions are not cheat-proof and must not be used as a trusted
 leaderboard. Firestore usage incurs reads and writes for each recorded action.
 
@@ -75,8 +77,9 @@ one leaderboard even though runs differ. Publishing and retiring dated challenge
 is manual; no automatic schedule is provided. Existing published configurations
 retain their fixed seeds; publish a new ID to switch one to random seeds.
 
-The menu requires a published configuration for saved games. If Firebase
-cannot be reached, **Play without saving** uses the bundled standard rules.
+The menu requires a published configuration for new saved games. If Firebase
+cannot be reached, **Play without saving** uses the bundled standard rules and
+does not change any saved active game.
 Admins can archive or restore configurations on `/admin`. Archived configs are
 hidden from the new-game menu, but remain available in score history. Games
 already in progress can finish; starting or restarting a saved game checks the

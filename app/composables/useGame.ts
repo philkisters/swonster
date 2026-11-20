@@ -43,7 +43,7 @@ export type GameAction
 
 const HEALTH_SPELLS: ReadonlySet<SpellId> = new Set(['fireball', 'fireballBarrage', 'heal'])
 
-export function useGame(onAction?: (action: GameAction, state: GameState) => void) {
+export function useGame(onAction?: (action: GameAction, state: GameState, history: SpawnEntry[]) => void) {
   const state = ref<GameState>(createInitialState(DEFAULT_RNG_SEED))
   const spawnHistory = ref<SpawnEntry[]>(createSpawnHistory(state.value))
   const attackAnimations = ref<AttackAnimation[]>([])
@@ -68,7 +68,14 @@ export function useGame(onAction?: (action: GameAction, state: GameState) => voi
       return
     }
 
-    onAction?.({ type: 'move', direction }, result.state)
+    const spawnedEntry = result.events.some(event => event.type === 'spawn')
+      ? state.value.spawnQueue[0] ?? null
+      : null
+    onAction?.(
+      { type: 'move', direction },
+      result.state,
+      spawnedEntry ? [...spawnHistory.value, spawnedEntry].slice(-7) : spawnHistory.value.slice(-7),
+    )
 
     const stateAfterActiveAttacks = result.stateAfterActiveAttacks
       ?? result.stateBeforeSpawn
@@ -95,9 +102,7 @@ export function useGame(onAction?: (action: GameAction, state: GameState) => voi
         stateAfterActiveAttacks.cells
       ),
       counterHealthChanges: getHealthChanges(stateAfterActiveAttacks.cells, result.state.cells),
-      spawnedEntry: result.events.some(event => event.type === 'spawn')
-        ? state.value.spawnQueue[0] ?? null
-        : null
+      spawnedEntry
     }
     isAnimating.value = true
     mergeAnimations.value = result.events.flatMap(event => event.type === 'merge' ? [event.resultId] : [])
@@ -164,7 +169,7 @@ export function useGame(onAction?: (action: GameAction, state: GameState) => voi
     const result = castSpell(state.value, slot, targets)
     if (!result.valid || !spellId) return
 
-    onAction?.({ type: 'spell', slot, spellId, targets }, result.state)
+    onAction?.({ type: 'spell', slot, spellId, targets }, result.state, spawnHistory.value.slice(-7))
 
     spellEffect.value = {
       id: ++spellCasts,
@@ -209,6 +214,20 @@ export function useGame(onAction?: (action: GameAction, state: GameState) => voi
     return seed
   }
 
+  function restore(savedState: GameState, history: SpawnEntry[]) {
+    clearTimeout(mergeDelay)
+    mergeDelay = undefined
+    state.value = savedState
+    spawnHistory.value = history
+    attackAnimations.value = []
+    mergeAnimations.value = []
+    pendingTurn.value = null
+    animationPhase.value = null
+    isAnimating.value = false
+    spellEffect.value = null
+    healthPopups.value = []
+  }
+
   function showSpawn() {
     const pending = pendingTurn.value
     if (!pending) return
@@ -241,6 +260,7 @@ export function useGame(onAction?: (action: GameAction, state: GameState) => voi
     move,
     cast,
     restart,
+    restore,
     finishMergeAnimations,
     finishAttackAnimations,
     finishSpawnAnimation,

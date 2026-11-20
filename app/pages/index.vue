@@ -25,6 +25,17 @@
           Save username
         </button>
       </form>
+      <button
+        v-if="hasActiveGame"
+        type="button"
+        class="game-menu-button-primary"
+        :disabled="loading"
+        @click="router.push({ path: '/game', query: { resume: '1' } })"
+      >
+        Resume Game
+      </button>
+      <p v-if="activeGameError" class="game-menu-error" role="alert">{{ activeGameError }}</p>
+      <button v-if="activeGameError" type="button" @click="loadActive">Retry loading saved game</button>
       <label for="game-config">Game configuration</label>
       <select id="game-config" v-model="selectedConfig" :disabled="configsLoading">
         <option v-for="config in configs" :key="config.id" :value="config.id">
@@ -83,6 +94,7 @@ const {
   connect,
   saveUsername,
   loadConfigs,
+  loadActiveGame,
 } = useGameTracking()
 
 const router = useRouter()
@@ -90,6 +102,8 @@ const configs = ref<AvailableConfig[]>([])
 const selectedConfig = ref('')
 const configError = ref('')
 const configsLoading = ref(false)
+const hasActiveGame = ref(false)
+const activeGameError = ref('')
 
 function startGame() {
   if (!ready.value) {
@@ -120,7 +134,18 @@ async function loadAvailableConfigs() {
 
 async function connectAndLoad() {
   await connect()
-  if (ready.value) await loadAvailableConfigs()
+  if (ready.value) await Promise.all([loadAvailableConfigs(), loadActive()])
+}
+
+async function loadActive() {
+  activeGameError.value = ''
+  try {
+    hasActiveGame.value = Boolean(await loadActiveGame())
+  } catch (cause) {
+    console.error('Could not load the saved game.', cause)
+    hasActiveGame.value = false
+    activeGameError.value = 'Could not load your saved game. Please try again.'
+  }
 }
 
 onMounted(() => void connectAndLoad())

@@ -77,7 +77,7 @@
         <GameSpellBar
           :cards="spellCards"
           :targeting="targeting"
-          :disabled="showTutorial || state.gameOver"
+          :disabled="showTutorial || state.gameOver || !!trackingError"
           @select="selectSpell"
           @cancel="cancelSpell"
         />
@@ -121,7 +121,8 @@ const {
   begin,
   record,
   end,
-  loadConfig
+  loadConfig,
+  loadActiveGame,
 } = useGameTracking()
 
 const {
@@ -135,6 +136,7 @@ const {
   move,
   cast,
   restart,
+  restore,
   finishMergeAnimations,
   finishAttackAnimations,
   finishSpawnAnimation,
@@ -150,8 +152,12 @@ const {
   cancel: cancelSpell
 } = useSpellCasting(state, isAnimating, cast)
 
+watch(trackingError, (message) => {
+  if (message) cancelSpell()
+})
+
 function moveWhenReady(direction: Direction) {
-  if (gameReady.value && !showTutorial.value && !targeting.value) move(direction)
+  if (gameReady.value && !trackingError.value && !showTutorial.value && !targeting.value) move(direction)
 }
 
 async function restartGame() {
@@ -160,7 +166,7 @@ async function restartGame() {
     await end()
     cancelSpell()
     const seed = restart()
-    if (selectedConfig) begin(seed, selectedConfig)
+    if (selectedConfig) await begin(seed, selectedConfig, state.value, spawnHistory.value)
   } catch (cause) {
     console.error('Could not start a new game.', cause)
     if (!(cause instanceof ArchivedConfigError)) gameReady.value = false
@@ -171,7 +177,11 @@ async function restartGame() {
 }
 
 async function returnToMenu() {
-  await end()
+  try {
+    await end()
+  } catch (cause) {
+    console.error('Could not save the game before returning to the menu.', cause)
+  }
   cancelSpell()
   await router.push('/')
 }
@@ -184,12 +194,21 @@ onMounted(async () => {
       return
     }
     await connect()
+    if (route.query.resume === '1') {
+      const saved = await loadActiveGame()
+      if (!saved) throw new Error('No active game is available.')
+      selectedConfig = saved.config
+      restore(saved.state, saved.history)
+      showTutorial.value = false
+      gameReady.value = true
+      return
+    }
     if (typeof route.query.config !== 'string' || !route.query.config) {
       throw new Error('No game configuration selected.')
     }
     selectedConfig = await loadConfig(route.query.config)
     const seed = restart(selectedConfig.rules)
-    begin(seed, selectedConfig)
+    await begin(seed, selectedConfig, state.value, spawnHistory.value)
     gameReady.value = true
   } catch (cause) {
     console.error('Could not start the game.', cause)

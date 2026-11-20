@@ -7,17 +7,19 @@ import {
   getDoc,
   getDocFromServer,
   getDocs,
+  getDocsFromServer,
   getFirestore,
   limit,
   orderBy,
   query,
+  runTransaction,
   setDoc,
   updateDoc,
   where,
-  writeBatch,
 } from 'firebase/firestore'
 import type { DocumentReference, Firestore } from 'firebase/firestore'
-import type { GameState } from '~~/game/types'
+import type { GameState, SpawnEntry } from '~~/game/types'
+import { gameStateSchema, spawnHistorySchema } from '../../game/stateValidation'
 import { parseAvailableConfig } from '../../game/configValidation'
 import type { AvailableConfig } from '../../game/configValidation'
 import type { GameAction } from './useGame'
@@ -48,6 +50,12 @@ interface Session {
   ended: boolean
 }
 
+export interface SavedGame {
+  state: GameState
+  history: SpawnEntry[]
+  config: AvailableConfig
+}
+
 export function useGameTracking() {
   const config = useRuntimeConfig().public
   const username = ref('')
@@ -66,22 +74,8 @@ export function useGameTracking() {
     error.value = message
   }
 
-  const writes = new Set<Promise<void>>()
-
-  function observeWrite(write: Promise<void>): Promise<void> {
-    pendingWrites.value++
-    const observed = write
-      .catch((cause: unknown) => {
-        console.error('A game save failed.', cause)
-        saveError.value = 'A game save failed. Your game data may be incomplete.'
-      })
-      .finally(() => {
-        pendingWrites.value--
-        writes.delete(observed)
-      })
-    writes.add(observed)
-    return observed
-  }
+  let writeQueue = Promise.resolve()
+  let writeFailure: unknown
 
   async function connect() {
     if (loading.value) return
@@ -124,7 +118,7 @@ export function useGameTracking() {
         savedUsername.value = name
       } else {
         const name = `anonymous-swonster#${user.uid.slice(0, 5).toLowerCase()}`
-        await setDoc(player, { username: name })
+        await setDoc(player, { username: name }, { merge: true })
         username.value = name
         savedUsername.value = name
       }
@@ -236,13 +230,62 @@ export function useGameTracking() {
       .slice(0, 10)
   }
 
-  function begin(initialSeed: number, config?: AvailableConfig) {
-    session = undefined
-    if (!database || !playerId || !ready.value) return false
-    const reference = doc(collection(database, 'players', playerId, 'games'))
-    session = { reference, step: 0, highScore: 0, ended: false }
-    observeWrite(
-      setDoc(reference, {
+  async function loadActiveGame(): Promise<SavedGame | null> {
+    if (!database || !playerId || !ready.value) throw new Error('Connect to Firebase before loading a game.')
+    const player = await getDocFromServer(doc(database, 'players', playerId))
+    const activeGameId: unknown = player.data()?.activeGameId
+    if (activeGameId === null || activeGameId === undefined) return null
+    if (typeof activeGameId !== 'string' || !activeGameId || activeGameId.includes('/')) {
+      throw new Error('Invalid active game reference.')
+    }
+    const reference = doc(database, 'players', playerId, 'games', activeGameId)
+    const snapshot = await getDocFromServer(reference)
+    if (!snapshot.exists()) throw new Error('The active game could not be found.')
+    const data = snapshot.data()
+    if (data.status !== 'active') throw new Error('The active game is no longer available.')
+    const state = gameStateSchema.parse(data.state)
+    const history = spawnHistorySchema.parse(data.spawnHistory)
+    if (state.gameOver || !Number.isSafeInteger(data.step) || data.step < 0
+      || typeof data.highScore !== 'number' || !Number.isFinite(data.highScore)
+      || typeof data.configId !== 'string' || typeof data.configName !== 'string') {
+      throw new Error('The saved game is invalid.')
+    }
+    session = { reference, step: data.step, highScore: data.highScore, ended: false }
+    return {
+      state,
+      history,
+      config: { id: data.configId, name: data.configName, rules: state.config },
+    }
+  }
+
+  async function begin(initialSeed: number, config: AvailableConfig, state: unknown, history: readonly SpawnEntry[]) {
+    if (!database || !playerId || !ready.value) throw new Error('Connect to Firebase before starting a game.')
+    await end()
+    const firestore = database
+    const player = doc(firestore, 'players', playerId)
+    const games = collection(firestore, 'players', playerId, 'games')
+    const reference = doc(games)
+    const savedState = gameStateSchema.parse(state)
+    const savedHistory = spawnHistorySchema.parse(history.slice(-7))
+    const activeGames = await getDocsFromServer(query(games, where('status', '==', 'active')))
+    await runTransaction(firestore, async (transaction) => {
+      const profile = await transaction.get(player)
+      const previousId: unknown = profile.data()?.activeGameId
+      if (previousId != null && (typeof previousId !== 'string' || !previousId || previousId.includes('/'))) {
+        throw new Error('Invalid active game reference.')
+      }
+      const previous = new Map(activeGames.docs.map(entry => [entry.ref.path, entry.ref]))
+      if (typeof previousId === 'string') {
+        const previousRef = doc(games, previousId)
+        previous.set(previousRef.path, previousRef)
+      }
+      const snapshots = await Promise.all([...previous.values()].map(ref => transaction.get(ref)))
+      for (const old of snapshots) {
+        if (old.exists() && old.data().status === 'active') {
+          transaction.update(old.ref, { status: 'aborted', endTime: Date.now() })
+        }
+      }
+      transaction.set(reference, {
         username: savedUsername.value,
         startTime: Date.now(),
         endTime: null,
@@ -251,51 +294,75 @@ export function useGameTracking() {
         highScore: 0,
         status: 'active',
         initialSeed,
-        ...(config ? { configId: config.id, configName: config.name, config: config.rules } : {}),
-      }),
-    )
-    return true
+        configId: config.id,
+        configName: config.name,
+        config: config.rules,
+        state: savedState,
+        spawnHistory: savedHistory,
+        step: 0,
+      })
+      transaction.update(player, { activeGameId: reference.id })
+    })
+    session = { reference, step: 0, highScore: 0, ended: false }
   }
 
-  function record(action: GameAction, state: GameState) {
-    if (!database || !session || session.ended) return
-    session.step++
-    session.highScore = Math.max(session.highScore, state.score)
-    session.ended = state.gameOver
-    const batch = writeBatch(database)
-    const step = doc(
-      session.reference,
-      'steps',
-      String(session.step).padStart(10, '0'),
-    )
-    batch.set(step, {
-      ...action,
-      sequence: session.step,
-      time: Date.now(),
-      turn: state.turn,
-      score: state.score,
+  function record(action: GameAction, state: GameState, history: SpawnEntry[]) {
+    if (!database || !playerId || !session || session.ended || writeFailure) return
+    const firestore = database
+    const current = session
+    const player = doc(firestore, 'players', playerId)
+    const savedState = gameStateSchema.parse(state)
+    const savedHistory = spawnHistorySchema.parse(history.slice(-7))
+    const savedAction: GameAction = action.type === 'move'
+      ? { ...action }
+      : { ...action, targets: action.targets.map(target => ({ ...target })) }
+    const sequence = ++current.step
+    current.highScore = Math.max(current.highScore, state.score)
+    const highScore = current.highScore
+    current.ended = state.gameOver
+    pendingWrites.value++
+    writeQueue = writeQueue.then(async () => {
+      if (writeFailure) return
+      await runTransaction(firestore, async (transaction) => {
+        const [profile, game] = await Promise.all([
+          transaction.get(player),
+          transaction.get(current.reference),
+        ])
+        if (profile.data()?.activeGameId !== current.reference.id || !game.exists()
+          || game.data().status !== 'active' || game.data().step !== sequence - 1) {
+          throw new Error('This game was changed in another session.')
+        }
+        transaction.set(doc(current.reference, 'steps', String(sequence).padStart(10, '0')), {
+          ...savedAction,
+          sequence,
+          time: Date.now(),
+          turn: savedState.turn,
+          score: savedState.score,
+        })
+        transaction.update(current.reference, {
+          username: savedUsername.value,
+          turn: savedState.turn,
+          score: savedState.score,
+          highScore,
+          step: sequence,
+          state: savedState,
+          spawnHistory: savedHistory,
+          ...(savedState.gameOver ? { endTime: Date.now(), status: 'game-over' } : {}),
+        })
+        if (savedState.gameOver) transaction.update(player, { activeGameId: null })
+      })
+    }).catch((cause: unknown) => {
+      writeFailure = cause
+      console.error('A game save failed.', cause)
+      saveError.value = 'A game save failed. Return to the menu and resume the last saved state.'
+    }).finally(() => {
+      pendingWrites.value--
     })
-    batch.update(session.reference, {
-      username: savedUsername.value,
-      turn: state.turn,
-      score: state.score,
-      highScore: session.highScore,
-      ...(state.gameOver ? { endTime: Date.now(), status: 'game-over' } : {}),
-    })
-    observeWrite(batch.commit())
   }
 
   async function end() {
-    if (session && !session.ended) {
-      session.ended = true
-      observeWrite(
-        updateDoc(session.reference, {
-          endTime: Date.now(),
-          status: 'abandoned',
-        }),
-      )
-    }
-    await Promise.all([...writes])
+    await writeQueue
+    if (writeFailure) throw new Error('Could not save the game.', { cause: writeFailure })
   }
 
   return {
@@ -310,6 +377,7 @@ export function useGameTracking() {
     loadHistory,
     loadConfigs,
     loadConfig,
+    loadActiveGame,
     begin,
     record,
     end,
