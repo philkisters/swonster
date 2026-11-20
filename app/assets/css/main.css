@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+html {
+  overscroll-behavior-x: none;
+}
+
 @theme static {
   --font-sans: 'Public Sans', sans-serif;
 
