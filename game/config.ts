@@ -1,14 +1,7 @@
 import type { Faction } from './types'
+import type { GameConfig, MonsterTypeDefinition } from './configValidation'
 
-export interface MonsterTypeDefinition {
-  name: string
-  faction: Faction
-  spritePrefix: string
-  baseMaxHp: number
-  baseAtk: number
-  hpMultiplier: number
-  atkMultiplier: number
-}
+export type { GameConfig, MonsterTypeDefinition } from './configValidation'
 
 export const MAX_MONSTER_SPRITE_LEVEL = 10
 export const BOARD_WIDTH = 4
@@ -68,8 +61,27 @@ export const MONSTER_TYPES: Record<string, MonsterTypeDefinition> = {
   }
 }
 
-export function getMonsterDefinition(typeId: string): MonsterTypeDefinition {
-  const definition = MONSTER_TYPES[typeId]
+export const DEFAULT_GAME_CONFIG: GameConfig = {
+  maxMonsterSpriteLevel: MAX_MONSTER_SPRITE_LEVEL,
+  boardWidth: BOARD_WIDTH,
+  boardHeight: BOARD_HEIGHT,
+  spawnQueueLength: SPAWN_QUEUE_LENGTH,
+  spawnTier: SPAWN_TIER,
+  friendSpawnChance: FRIEND_SPAWN_CHANCE,
+  rngSeed: null,
+  enemyTierProgression: ENEMY_TIER_PROGRESSION.map(entry => ({ ...entry })),
+  enemyDefeatReward: { ...ENEMY_DEFEAT_REWARD },
+  enemyDefeatScoreMultiplier: ENEMY_DEFEAT_SCORE_MULTIPLIER,
+  friendlyMergeScore: FRIENDLY_MERGE_SCORE,
+  friendlyMergeScoreMultiplier: FRIENDLY_MERGE_SCORE_MULTIPLIER,
+  enemyTierUnlockPlayerTier: ENEMY_TIER_UNLOCK_PLAYER_TIER,
+  spellSlotCount: SPELL_SLOT_COUNT,
+  spellRefillInterval: SPELL_REFILL_INTERVAL,
+  monsterTypes: MONSTER_TYPES
+}
+
+export function getMonsterDefinition(typeId: string, config: GameConfig = DEFAULT_GAME_CONFIG): MonsterTypeDefinition {
+  const definition = config.monsterTypes[typeId]
   if (!definition) {
     throw new Error(`Unknown monster type: ${typeId}`)
   }
@@ -77,45 +89,45 @@ export function getMonsterDefinition(typeId: string): MonsterTypeDefinition {
   return definition
 }
 
-export function getMonsterTypeIds(faction: Faction): string[] {
-  return Object.keys(MONSTER_TYPES).filter(typeId => MONSTER_TYPES[typeId]?.faction === faction)
+export function getMonsterTypeIds(faction: Faction, config: GameConfig = DEFAULT_GAME_CONFIG): string[] {
+  return Object.keys(config.monsterTypes).filter(typeId => config.monsterTypes[typeId]?.faction === faction)
 }
 
-export function getEnemyDefeatScore(tier: number): number {
-  return ENEMY_DEFEAT_REWARD.score * ENEMY_DEFEAT_SCORE_MULTIPLIER ** (tier - 1)
+export function getEnemyDefeatScore(tier: number, config: GameConfig = DEFAULT_GAME_CONFIG): number {
+  return config.enemyDefeatReward.score * config.enemyDefeatScoreMultiplier ** (tier - 1)
 }
 
 /** Score for merging two friendly monsters of the given tier into the next one. */
-export function getFriendlyMergeScore(tier: number): number {
-  return FRIENDLY_MERGE_SCORE * FRIENDLY_MERGE_SCORE_MULTIPLIER ** (tier - 1)
+export function getFriendlyMergeScore(tier: number, config: GameConfig = DEFAULT_GAME_CONFIG): number {
+  return config.friendlyMergeScore * config.friendlyMergeScoreMultiplier ** (tier - 1)
 }
 
-function getMonsterSpriteFile(typeId: string, tier: number): string {
+function getMonsterSpriteFile(typeId: string, tier: number, config?: GameConfig): string {
   if (!Number.isInteger(tier) || tier < 1) {
     throw new Error(`Invalid monster tier: ${tier}`)
   }
 
-  const definition = getMonsterDefinition(typeId)
-  const spriteLevel = Math.min(tier, MAX_MONSTER_SPRITE_LEVEL)
+  const definition = getMonsterDefinition(typeId, config)
+  const spriteLevel = Math.min(tier, (config ?? DEFAULT_GAME_CONFIG).maxMonsterSpriteLevel)
 
   return `${definition.spritePrefix}-level-${spriteLevel}.png`
 }
 
-export function getMonsterSprite(typeId: string, tier: number): string {
-  return `/sprites/${getMonsterSpriteFile(typeId, tier)}`
+export function getMonsterSprite(typeId: string, tier: number, config?: GameConfig): string {
+  return `/sprites/${getMonsterSpriteFile(typeId, tier, config)}`
 }
 
 /** Returns the square head portrait matching the full sprite of a monster. */
-export function getMonsterHeadSprite(typeId: string, tier: number): string {
-  return `/sprites/heads/${getMonsterSpriteFile(typeId, tier)}`
+export function getMonsterHeadSprite(typeId: string, tier: number, config?: GameConfig): string {
+  return `/sprites/heads/${getMonsterSpriteFile(typeId, tier, config)}`
 }
 
-export function getMonsterStats(typeId: string, tier: number): { maxHp: number, atk: number } {
+export function getMonsterStats(typeId: string, tier: number, config?: GameConfig): { maxHp: number, atk: number } {
   if (!Number.isInteger(tier) || tier < 1) {
     throw new Error(`Invalid monster tier: ${tier}`)
   }
 
-  const definition = getMonsterDefinition(typeId)
+  const definition = getMonsterDefinition(typeId, config)
   const tierOffset = tier - 1
 
   return {

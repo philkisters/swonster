@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialState } from '../game/initialState'
-import { useGameTracking } from '../app/composables/useGameTracking'
+import { DEFAULT_GAME_CONFIG } from '../game/config'
+import { ArchivedConfigError, useGameTracking } from '../app/composables/useGameTracking'
 
 const firebase = vi.hoisted(() => ({
   setDoc: vi.fn(),
   updateDoc: vi.fn(),
   getDoc: vi.fn(),
+  getDocFromServer: vi.fn(),
   batchSet: vi.fn(),
   batchUpdate: vi.fn(),
   commit: vi.fn(),
@@ -33,6 +35,7 @@ vi.mock('firebase/firestore', () => ({
       .join('/'),
   }),
   getDoc: firebase.getDoc,
+  getDocFromServer: firebase.getDocFromServer,
   getDocs: firebase.getDocs,
   setDoc: firebase.setDoc,
   updateDoc: firebase.updateDoc,
@@ -71,6 +74,73 @@ beforeEach(() => {
 })
 
 describe('game tracking', () => {
+  it('loads published configurations and snapshots the selected rules with each game', async () => {
+    const tracking = useGameTracking()
+    await tracking.connect()
+    firebase.getDocs.mockResolvedValueOnce({
+      docs: [{ id: 'daily-1', data: () => ({ name: 'Daily', rules: DEFAULT_GAME_CONFIG }) }],
+    })
+    const configs = await tracking.loadConfigs()
+    expect(configs).toEqual([{ id: 'daily-1', name: 'Daily', rules: DEFAULT_GAME_CONFIG }])
+    firebase.getDocFromServer.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ name: 'Daily', rules: DEFAULT_GAME_CONFIG }),
+    })
+    const selected = await tracking.loadConfig('daily-1')
+    tracking.begin(42, selected)
+    expect(firebase.setDoc).toHaveBeenLastCalledWith(
+      { path: 'players/abcde12345/games/new-game' },
+      expect.objectContaining({
+        configId: 'daily-1', configName: 'Daily', config: DEFAULT_GAME_CONFIG, initialSeed: 42
+      }),
+    )
+  })
+
+  it('keeps archived configurations in history lists but rejects them for new games', async () => {
+    const tracking = useGameTracking()
+    await tracking.connect()
+    firebase.getDocs.mockResolvedValue({
+      docs: [
+        { id: 'legacy', data: () => ({ name: 'Legacy', rules: DEFAULT_GAME_CONFIG }) },
+        { id: 'archived', data: () => ({ name: 'Archived', rules: DEFAULT_GAME_CONFIG, archived: true }) },
+        { id: 'restored', data: () => ({ name: 'Restored', rules: DEFAULT_GAME_CONFIG, archived: false }) },
+      ],
+    })
+    expect((await tracking.loadConfigs()).map(config => config.id)).toEqual(['legacy', 'restored'])
+    expect((await tracking.loadConfigs(true)).find(config => config.id === 'archived')?.archived).toBe(true)
+    firebase.getDocFromServer.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ name: 'Archived', rules: DEFAULT_GAME_CONFIG, archived: true }),
+    })
+    await expect(tracking.loadConfig('archived')).rejects.toBeInstanceOf(ArchivedConfigError)
+    firebase.getDocFromServer.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ name: 'Restored', rules: DEFAULT_GAME_CONFIG, archived: false }),
+    })
+    await expect(tracking.loadConfig('restored')).resolves.toMatchObject({ id: 'restored', archived: false })
+  })
+
+  it('filters high scores by configuration and keeps older games separate', async () => {
+    const tracking = useGameTracking()
+    await tracking.connect()
+    firebase.getDocs.mockResolvedValue({
+      docs: [
+        { id: 'old', data: () => ({ status: 'game-over', highScore: 10, username: 'Player' }) },
+        { id: 'new', data: () => ({ status: 'game-over', highScore: 100, configId: 'daily-1', username: 'Player' }) },
+      ],
+    })
+    await tracking.loadHistory('best-global', 'daily-1')
+    expect(firebase.getDocs.mock.calls[0][0]).toMatchObject({
+      constraints: [
+        { type: 'where', values: ['configId', '==', 'daily-1'] },
+        { type: 'where', values: ['status', '==', 'game-over'] },
+        { type: 'orderBy', values: ['highScore', 'desc'] },
+        { type: 'limit', value: 10 },
+      ],
+    })
+    expect((await tracking.loadHistory('best-personal', '__legacy__')).map(game => game.id)).toEqual(['old'])
+  })
+
   it('creates a player and records ordered actions and final metrics', async () => {
     const tracking = useGameTracking()
     await tracking.connect()
@@ -79,7 +149,7 @@ describe('game tracking', () => {
       { path: 'players/abcde12345' },
       { username: 'anonymous-swonster#abcde' },
     )
-    expect(tracking.begin()).toBe(true)
+    expect(tracking.begin(42)).toBe(true)
     const state = createInitialState(42)
     tracking.record(
       { type: 'move', direction: 'left' },
@@ -122,11 +192,11 @@ describe('game tracking', () => {
 
   it('marks unfinished games abandoned and does not record without a player', async () => {
     const tracking = useGameTracking()
-    expect(tracking.begin()).toBe(false)
+    expect(tracking.begin(42)).toBe(false)
     tracking.record({ type: 'move', direction: 'up' }, createInitialState(42))
     expect(firebase.batchSet).not.toHaveBeenCalled()
     await tracking.connect()
-    tracking.begin()
+    tracking.begin(42)
     tracking.end()
     expect(firebase.updateDoc).toHaveBeenCalledWith(
       { path: 'players/abcde12345/games/new-game' },
@@ -156,7 +226,7 @@ describe('game tracking', () => {
     const tracking = useGameTracking()
     await tracking.connect()
     firebase.commit.mockRejectedValueOnce(new Error('permission denied'))
-    tracking.begin()
+    tracking.begin(42)
     tracking.record({ type: 'move', direction: 'up' }, createInitialState(42))
     await vi.waitFor(() =>
       expect(tracking.error.value).toContain('game save failed'),

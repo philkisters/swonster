@@ -1,34 +1,32 @@
 import {
+  DEFAULT_GAME_CONFIG,
   DEFAULT_RNG_SEED,
-  ENEMY_TIER_PROGRESSION,
-  FRIEND_SPAWN_CHANCE,
   getMonsterDefinition,
   getMonsterStats,
-  getMonsterTypeIds,
-  SPAWN_QUEUE_LENGTH,
-  SPAWN_TIER
+  getMonsterTypeIds
 } from './config'
+import type { GameConfig } from './config'
 import { nextSeed } from './rng'
 import type { GameEvent, GameState, Monster, SpawnEntry, SpawnKind } from './types'
 
-export function nextSpawnEntry(seed: number, turnsSinceUnlock = 0): { entry: SpawnEntry, rngSeed: number } {
+export function nextSpawnEntry(seed: number, turnsSinceUnlock = 0, config: GameConfig = DEFAULT_GAME_CONFIG): { entry: SpawnEntry, rngSeed: number } {
   let rngSeed = nextSeed(seed)
-  const kind: SpawnKind = rngSeed / 0x100000000 < FRIEND_SPAWN_CHANCE ? 'friend' : 'enemy'
+  const kind: SpawnKind = rngSeed / 0x100000000 < config.friendSpawnChance ? 'friend' : 'enemy'
   rngSeed = nextSeed(rngSeed)
   const faction = kind === 'friend' ? 'player' : 'enemy'
-  const typeIds = getMonsterTypeIds(faction)
+  const typeIds = getMonsterTypeIds(faction, config)
   const typeIndex = Math.floor(rngSeed / 0x100000000 * typeIds.length)
   const typeId = typeIds[typeIndex]
   if (!typeId) {
     throw new Error(`Cannot generate a ${faction} spawn without configured monster types`)
   }
 
-  let tier: number = SPAWN_TIER
+  let tier: number = config.spawnTier
   if (kind === 'enemy' && turnsSinceUnlock > 0) {
     rngSeed = nextSeed(rngSeed)
     const roll = rngSeed / 0x100000000
     let threshold = 0
-    for (const progression of ENEMY_TIER_PROGRESSION) {
+    for (const progression of config.enemyTierProgression) {
       threshold += Math.min(turnsSinceUnlock * progression.chancePerTurn, progression.maxChance)
       if (roll < threshold) {
         tier = progression.tier
@@ -47,15 +45,15 @@ export function nextSpawnEntry(seed: number, turnsSinceUnlock = 0): { entry: Spa
   }
 }
 
-export function createSpawnQueue(seed = DEFAULT_RNG_SEED): {
+export function createSpawnQueue(seed = DEFAULT_RNG_SEED, config: GameConfig = DEFAULT_GAME_CONFIG): {
   spawnQueue: SpawnEntry[]
   rngSeed: number
 } {
   const spawnQueue: SpawnEntry[] = []
   let rngSeed = seed >>> 0
 
-  for (let index = 0; index < SPAWN_QUEUE_LENGTH; index++) {
-    const next = nextSpawnEntry(rngSeed)
+  for (let index = 0; index < config.spawnQueueLength; index++) {
+    const next = nextSpawnEntry(rngSeed, 0, config)
     spawnQueue.push(next.entry)
     rngSeed = next.rngSeed
   }
@@ -73,7 +71,7 @@ export function spawnNextMonster(state: GameState): {
   if (!entry) {
     throw new Error('Cannot spawn a monster without a spawn queue entry')
   }
-  const definition = getMonsterDefinition(entry.typeId)
+  const definition = getMonsterDefinition(entry.typeId, state.config)
   const expectedFaction = entry.kind === 'friend' ? 'player' : 'enemy'
   if (definition.faction !== expectedFaction) {
     throw new Error(`Monster type ${entry.typeId} cannot spawn for faction ${expectedFaction}`)
@@ -89,7 +87,7 @@ export function spawnNextMonster(state: GameState): {
     throw new Error('Cannot select a free cell for the spawn')
   }
 
-  const stats = getMonsterStats(entry.typeId, entry.tier)
+  const stats = getMonsterStats(entry.typeId, entry.tier, state.config)
   const monster: Monster = {
     id: `spawn-${state.turn}`,
     faction: definition.faction,
@@ -106,7 +104,7 @@ export function spawnNextMonster(state: GameState): {
   const turnsSinceUnlock = state.enemyTierUnlockTurn === null
     ? 0
     : state.turn - state.enemyTierUnlockTurn
-  const next = nextSpawnEntry(positionSeed, turnsSinceUnlock)
+  const next = nextSpawnEntry(positionSeed, turnsSinceUnlock, state.config)
 
   return {
     cells,

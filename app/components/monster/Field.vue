@@ -9,7 +9,7 @@
   >
     <img
       class="monster-sprite"
-      :src="withBaseURL(getMonsterSprite(monster.typeId, monster.tier))"
+      :src="withBaseURL(getMonsterSprite(monster.typeId, monster.tier, config))"
       alt=""
       aria-hidden="true"
       draggable="false"
@@ -45,8 +45,9 @@
 <script lang="ts" setup>
 import type { Monster } from '~~/game/types'
 import { getMonsterSprite } from '~~/game/config'
+import type { GameConfig } from '~~/game/config'
 
-const { monster } = defineProps<{ monster: Monster }>()
+const { monster, config } = defineProps<{ monster: Monster, config?: GameConfig }>()
 const { app } = useRuntimeConfig()
 
 const hpPercent = computed(() => {

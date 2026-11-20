@@ -1,4 +1,5 @@
-import { DEFAULT_RNG_SEED, SPELL_SLOT_COUNT } from './config'
+import { DEFAULT_GAME_CONFIG, DEFAULT_RNG_SEED } from './config'
+import type { GameConfig } from './config'
 import { nextSeed } from './rng'
 import { SPELLS } from './spells'
 import type { GameState, SpellId } from './types'
@@ -7,9 +8,9 @@ type SpellSlotState = Pick<GameState, 'spellSlots' | 'spellRngSeed'>
 
 const SPELL_SEED_OFFSET = 0x9e3779b9
 
-export function createSpellSlots(seed = DEFAULT_RNG_SEED): SpellSlotState {
+export function createSpellSlots(seed = DEFAULT_RNG_SEED, config: GameConfig = DEFAULT_GAME_CONFIG): SpellSlotState {
   return {
-    spellSlots: Array(SPELL_SLOT_COUNT).fill(null),
+    spellSlots: Array(config.spellSlotCount).fill(null),
     spellRngSeed: (seed ^ SPELL_SEED_OFFSET) >>> 0
   }
 }

@@ -7,6 +7,9 @@ import { castSpell } from '~~/game/spells'
 import { getTargetCells } from '~~/game/targeting'
 import type { Target } from '~~/game/targeting'
 import type { Direction, GameEvent, GameState, SpawnEntry, SpellId } from '~~/game/types'
+import type { GameConfig } from '~~/game/config'
+import { DEFAULT_GAME_CONFIG, DEFAULT_RNG_SEED } from '~~/game/config'
+import { chooseRunSeed } from '~~/game/rng'
 
 interface AttackAnimation {
   monsterId: string
@@ -41,7 +44,7 @@ export type GameAction
 const HEALTH_SPELLS: ReadonlySet<SpellId> = new Set(['fireball', 'fireballBarrage', 'heal'])
 
 export function useGame(onAction?: (action: GameAction, state: GameState) => void) {
-  const state = ref<GameState>(createInitialState())
+  const state = ref<GameState>(createInitialState(DEFAULT_RNG_SEED))
   const spawnHistory = ref<SpawnEntry[]>(createSpawnHistory(state.value))
   const attackAnimations = ref<AttackAnimation[]>([])
   const mergeAnimations = ref<string[]>([])
@@ -189,10 +192,12 @@ export function useGame(onAction?: (action: GameAction, state: GameState) => voi
     healthPopups.value = healthPopups.value.filter(popup => popup.id !== id)
   }
 
-  function restart() {
+  function restart(config?: GameConfig) {
+    const rules = config ?? state.value.config ?? DEFAULT_GAME_CONFIG
+    const seed = chooseRunSeed(rules.rngSeed)
     clearTimeout(mergeDelay)
     mergeDelay = undefined
-    state.value = createInitialState()
+    state.value = createInitialState(seed, rules)
     spawnHistory.value = createSpawnHistory(state.value)
     attackAnimations.value = []
     mergeAnimations.value = []
@@ -201,6 +206,7 @@ export function useGame(onAction?: (action: GameAction, state: GameState) => voi
     isAnimating.value = false
     spellEffect.value = null
     healthPopups.value = []
+    return seed
   }
 
   function showSpawn() {

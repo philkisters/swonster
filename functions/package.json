@@ -1,0 +1,21 @@
+{
+  "name": "swonster-functions",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.cjs",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node22 --external:firebase-admin --external:firebase-admin/* --external:firebase-functions --external:firebase-functions/* --outfile=dist/index.cjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1",
+    "firebase-functions": "^7.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^6.0.3"
+  }
+}

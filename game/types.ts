@@ -1,3 +1,5 @@
+import type { GameConfig } from './config'
+
 export type Direction = 'up' | 'down' | 'left' | 'right'
 export type Faction = 'player' | 'enemy'
 export type SpawnKind = 'friend' | 'enemy' | 'boss'
@@ -34,6 +36,7 @@ export interface SpawnEntry {
 }
 
 export interface GameState {
+  config?: GameConfig
   width: number
   height: number
   cells: (Monster | null)[]

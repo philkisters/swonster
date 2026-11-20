@@ -13,6 +13,12 @@
       <h1 id="score-title">Scores</h1>
     </header>
 
+    <label for="score-config">Game configuration</label>
+    <select id="score-config" v-model="selectedConfig" :disabled="configsLoading">
+      <option v-for="config in configs" :key="config.id" :value="config.id">{{ config.name }}{{ config.archived ? ' (archived)' : '' }}</option>
+      <option value="__legacy__">Legacy games</option>
+    </select>
+
     <div class="game-score-switcher" role="group" aria-label="History order">
       <button
         v-for="option in options"
@@ -83,6 +89,7 @@
 
 <script lang="ts" setup>
 import type { GameHistoryEntry, HistoryOrder } from '~/composables/useGameTracking'
+import type { AvailableConfig } from '~~/game/configValidation'
 
 const options: { value: HistoryOrder, label: string }[] = [
   { value: 'latest', label: 'Latest' },
@@ -93,7 +100,10 @@ const options: { value: HistoryOrder, label: string }[] = [
 const route = useRoute()
 const router = useRouter()
 const { app } = useRuntimeConfig()
-const { connect, loadHistory } = useGameTracking()
+const { connect, loadHistory, loadConfigs, ready } = useGameTracking()
+const configs = ref<AvailableConfig[]>([])
+const configsLoading = ref(true)
+const selectedConfig = ref(typeof route.query.config === 'string' ? route.query.config : '__legacy__')
 const requestedView = route.query.view
 const view = ref<HistoryOrder>(
   requestedView === 'best-personal' || requestedView === 'best'
@@ -138,7 +148,7 @@ async function refreshHistory() {
   loading.value = true
   historyError.value = ''
   try {
-    const result = await loadHistory(view.value)
+    const result = await loadHistory(view.value, selectedConfig.value)
     if (currentRequest === requestId) games.value = result
   } catch (cause) {
     console.error('Could not load game history.', cause)
@@ -150,10 +160,29 @@ async function refreshHistory() {
   }
 }
 
-watch(view, refreshHistory)
+watch([view, selectedConfig], () => {
+  if (!configsLoading.value) void refreshHistory()
+})
 
 onMounted(async () => {
   await connect()
+  if (ready.value) {
+    try {
+      configs.value = await loadConfigs(true)
+      if (selectedConfig.value !== '__legacy__' && !configs.value.some(config => config.id === selectedConfig.value)) {
+        selectedConfig.value = '__legacy__'
+      }
+    } catch (cause) {
+      console.error('Could not load game configurations.', cause)
+      historyError.value = 'Could not load game configurations. Return to the menu and try again.'
+      loading.value = false
+      return
+    } finally {
+      configsLoading.value = false
+    }
+  } else {
+    configsLoading.value = false
+  }
   await refreshHistory()
 })
 </script>

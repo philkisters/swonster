@@ -25,10 +25,18 @@
           Save username
         </button>
       </form>
+      <label for="game-config">Game configuration</label>
+      <select id="game-config" v-model="selectedConfig" :disabled="configsLoading">
+        <option v-for="config in configs" :key="config.id" :value="config.id">
+          {{ config.name }}
+        </option>
+      </select>
+      <p v-if="configError" class="game-menu-error" role="alert">{{ configError }}</p>
+      <button v-if="configError" type="button" @click="loadAvailableConfigs">Retry loading configurations</button>
       <button
         type="button"
         class="game-menu-button-primary"
-        :disabled="loading"
+        :disabled="loading || configsLoading || !selectedConfig"
         @click="startGame"
       >
         New Game
@@ -37,7 +45,7 @@
         type="button"
         class="game-menu-button-secondary"
         :disabled="loading"
-        @click="router.push('/scores')"
+        @click="router.push({ path: '/scores', query: { config: selectedConfig || '__legacy__' } })"
       >
         History
       </button>
@@ -46,13 +54,13 @@
         type="button"
         class="game-menu-button-secondary"
         :disabled="loading"
-        @click="router.push({ path: '/scores', query: { view: 'best-personal' } })"
+        @click="router.push({ path: '/scores', query: { view: 'best-personal', config: selectedConfig || '__legacy__' } })"
       >
         High Scores
       </button>
     </template>
     <template v-if="!ready && error !== ''">
-      <button type="button" @click="connect()">
+      <button type="button" @click="connectAndLoad">
         Retry connection
       </button>
       <button type="button" class="game-menu-button-primary" @click="startGame">
@@ -64,6 +72,7 @@
 </template>
 
 <script setup lang="ts">
+import type { AvailableConfig } from '~~/game/configValidation'
 
 const {
   username,
@@ -73,16 +82,48 @@ const {
   hasUnsavedUsername,
   connect,
   saveUsername,
+  loadConfigs,
 } = useGameTracking()
 
 const router = useRouter()
+const configs = ref<AvailableConfig[]>([])
+const selectedConfig = ref('')
+const configError = ref('')
+const configsLoading = ref(false)
 
 function startGame() {
-  if (!ready) return
-  router.push('/game')
+  if (!ready.value) {
+    router.push({ path: '/game', query: { offline: '1' } })
+    return
+  }
+  if (selectedConfig.value) router.push({ path: '/game', query: { config: selectedConfig.value } })
 }
 
-onMounted(() => void connect())
+async function loadAvailableConfigs() {
+  configsLoading.value = true
+  configError.value = ''
+  try {
+    configs.value = await loadConfigs()
+    selectedConfig.value = configs.value.some(config => config.id === selectedConfig.value)
+      ? selectedConfig.value
+      : configs.value[0]?.id ?? ''
+    if (!configs.value.length) configError.value = 'No active game configurations are available. Ask an administrator to publish or restore one.'
+  } catch (cause) {
+    console.error('Could not load game configurations.', cause)
+    configs.value = []
+    selectedConfig.value = ''
+    configError.value = 'Could not load game configurations. Please try again.'
+  } finally {
+    configsLoading.value = false
+  }
+}
+
+async function connectAndLoad() {
+  await connect()
+  if (ready.value) await loadAvailableConfigs()
+}
+
+onMounted(() => void connectAndLoad())
 </script>
 
 <style scoped>
@@ -110,6 +151,7 @@ onMounted(() => void connect())
 }
 
 .game-menu input,
+.game-menu select,
 .game-menu button {
   padding: 0.7rem;
   border: 1px solid var(--ui-border);

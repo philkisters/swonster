@@ -1,4 +1,4 @@
-import { ENEMY_DEFEAT_REWARD, ENEMY_TIER_UNLOCK_PLAYER_TIER, SPELL_REFILL_INTERVAL } from './config'
+import { DEFAULT_GAME_CONFIG } from './config'
 import { resolveCombat } from './combat'
 import { slideAndMerge } from './movement'
 import { spawnNextMonster } from './spawning'
@@ -6,6 +6,7 @@ import { refillSpellSlot } from './spellSlots'
 import type { Direction, GameState, TurnResult } from './types'
 
 export function executeTurn(state: GameState, direction: Direction): TurnResult {
+  const config = state.config ?? DEFAULT_GAME_CONFIG
   if (state.gameOver) {
     return { state, events: [], valid: false }
   }
@@ -25,7 +26,7 @@ export function executeTurn(state: GameState, direction: Direction): TurnResult 
   const unlockedEnemyTiers = movement.events.some(event =>
     event.type === 'merge'
     && movement.cells[event.at]?.faction === 'player'
-    && movement.cells[event.at]?.tier === ENEMY_TIER_UNLOCK_PLAYER_TIER
+    && movement.cells[event.at]?.tier === config.enemyTierUnlockPlayerTier
   )
   const turn = state.turn + 1
   const stateAfterMovement: GameState = {
@@ -33,7 +34,7 @@ export function executeTurn(state: GameState, direction: Direction): TurnResult 
     cells: movement.cells,
     turn,
     score: state.score + movement.score,
-    ...(turn % SPELL_REFILL_INTERVAL === 0 ? refillSpellSlot(state) : {}),
+    ...(turn % config.spellRefillInterval === 0 ? refillSpellSlot(state) : {}),
     enemyTierUnlockTurn: state.enemyTierUnlockTurn ?? (unlockedEnemyTiers ? state.turn + 1 : null)
   }
   const stateAfterActiveAttacks: GameState = {
@@ -44,8 +45,8 @@ export function executeTurn(state: GameState, direction: Direction): TurnResult 
     ...stateAfterMovement,
     cells: combat.cells,
     score: stateAfterMovement.score + combat.enemyDefeatScore,
-    gold: state.gold + ENEMY_DEFEAT_REWARD.gold * rewards,
-    xp: state.xp + ENEMY_DEFEAT_REWARD.xp * rewards
+    gold: state.gold + config.enemyDefeatReward.gold * rewards,
+    xp: state.xp + config.enemyDefeatReward.xp * rewards
   }
   if (nextState.cells.every(monster => monster !== null)) {
     return {

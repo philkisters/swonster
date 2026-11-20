@@ -1,4 +1,5 @@
 import { getMonsterStats } from './config'
+import type { GameConfig } from './config'
 import type { GameEvent, Monster } from './types'
 
 export function canMerge(first: Monster, second: Monster): boolean {
@@ -13,14 +14,15 @@ export function mergeMonsters(
   first: Monster,
   second: Monster,
   turn: number,
-  at: number
+  at: number,
+  config?: GameConfig
 ): { monster: Monster, event: GameEvent } {
   if (!canMerge(first, second)) {
     throw new Error('Cannot merge incompatible monsters')
   }
 
   const tier = first.tier + 1
-  const stats = getMonsterStats(first.typeId, tier)
+  const stats = getMonsterStats(first.typeId, tier, config)
   const sourceIds: [string, string] = [first.id, second.id]
   const stableIds = [...sourceIds].sort()
   const resultId = `merge-${turn}-${stableIds[0]}-${stableIds[1]}`

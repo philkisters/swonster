@@ -1,14 +1,19 @@
 <template>
   <div class="game-shell">
     <GameHeader
+      v-if="gameReady"
       :score="state.score"
       :gold="state.gold"
       :xp="state.xp"
       @end-game="returnToMenu"
     />
     <p v-if="trackingError" class="game-tracking-error" role="alert">{{ trackingError }}</p>
+    <p v-if="configError" class="game-tracking-error" role="alert">{{ configError }}</p>
+    <button v-if="configError" type="button" @click="router.push('/')">Go to Main Menu</button>
+    <MenuLoading v-if="!gameReady && !configError" text="Loading game configuration..." :size="8" />
 
     <section
+      v-if="gameReady"
       class="play-area"
       aria-label="Game"
     >
@@ -17,6 +22,7 @@
           :history="spawnHistory"
           :queue="state.spawnQueue"
           :turn="state.turn"
+          :config="state.config"
         />
 
         <div class="game-board-wrapper">
@@ -102,15 +108,20 @@
 
 <script setup lang="ts">
 import type { Direction } from '../../game/types'
+import type { AvailableConfig } from '../../game/configValidation'
+import { ArchivedConfigError } from '~/composables/useGameTracking'
 
 const showTutorial = ref(true)
-const savedGame = ref(false)
+const gameReady = ref(false)
+const configError = ref('')
+let selectedConfig: AvailableConfig | undefined
 const {
   error: trackingError,
   connect,
   begin,
   record,
-  end
+  end,
+  loadConfig
 } = useGameTracking()
 
 const {
@@ -140,14 +151,23 @@ const {
 } = useSpellCasting(state, isAnimating, cast)
 
 function moveWhenReady(direction: Direction) {
-  if (!showTutorial.value && !targeting.value) move(direction)
+  if (gameReady.value && !showTutorial.value && !targeting.value) move(direction)
 }
 
 async function restartGame() {
-  await end()
-  cancelSpell()
-  restart()
-  savedGame.value = begin()
+  try {
+    if (selectedConfig) selectedConfig = await loadConfig(selectedConfig.id)
+    await end()
+    cancelSpell()
+    const seed = restart()
+    if (selectedConfig) begin(seed, selectedConfig)
+  } catch (cause) {
+    console.error('Could not start a new game.', cause)
+    if (!(cause instanceof ArchivedConfigError)) gameReady.value = false
+    configError.value = cause instanceof ArchivedConfigError
+      ? cause.message
+      : 'Could not start a new game. Return to the menu and try again.'
+  }
 }
 
 async function returnToMenu() {
@@ -157,10 +177,29 @@ async function returnToMenu() {
 }
 
 onMounted(async () => {
-  await connect()
-  savedGame.value = begin()
+  try {
+    if (route.query.offline === '1') {
+      restart()
+      gameReady.value = true
+      return
+    }
+    await connect()
+    if (typeof route.query.config !== 'string' || !route.query.config) {
+      throw new Error('No game configuration selected.')
+    }
+    selectedConfig = await loadConfig(route.query.config)
+    const seed = restart(selectedConfig.rules)
+    begin(seed, selectedConfig)
+    gameReady.value = true
+  } catch (cause) {
+    console.error('Could not start the game.', cause)
+    configError.value = cause instanceof ArchivedConfigError
+      ? cause.message
+      : 'Could not load the configuration or start the game. Return to the menu and try again.'
+  }
 })
 const router = useRouter()
+const route = useRoute()
 useGameInput(moveWhenReady, cancelSpell)
 </script>
 

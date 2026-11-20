@@ -35,13 +35,13 @@
       role="gridcell"
       :tabindex="targetableCells.has(index) ? 0 : undefined"
       :aria-label="monster
-        ? `${getMonsterDefinition(monster.typeId).name}, ${monster.faction === 'player' ? 'Ally' : 'Enemy'}, tier ${monster.tier}, HP ${monster.hp} of ${monster.maxHp}, attack ${monster.atk}`
+        ? `${getMonsterDefinition(monster.typeId, state.config).name}, ${monster.faction === 'player' ? 'Ally' : 'Enemy'}, tier ${monster.tier}, HP ${monster.hp} of ${monster.maxHp}, attack ${monster.atk}`
         : 'Empty'"
       @animationend="onAnimationEnd($event, monster)"
       @click="pickCell(index)"
       @keydown.enter.space.prevent="pickCell(index)"
     >
-      <MonsterField v-if="monster" :monster="monster" />
+      <MonsterField v-if="monster" :monster="monster" :config="state.config" />
       <UIcon
         v-else-if="targetableCells.has(index)"
         name="lucide:plus"
@@ -99,6 +99,7 @@
 
 <script setup lang="ts">
 import { getMonsterDefinition } from '~~/game/config'
+import type { GameConfig } from '~~/game/config'
 import { getDirectionFromSwipe } from '~~/game/input'
 import { getSpellSprite } from '~~/game/spells'
 import { getTargetCells, isSameTarget } from '~~/game/targeting'
@@ -106,6 +107,7 @@ import type { Target } from '~~/game/targeting'
 import type { Direction, Monster, SpellId } from '~~/game/types'
 
 interface BoardState {
+  config?: GameConfig
   width: number
   height: number
   cells: readonly (Readonly<Monster> | null)[]

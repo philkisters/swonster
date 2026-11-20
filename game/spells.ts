@@ -1,6 +1,5 @@
 import {
-  ENEMY_DEFEAT_REWARD,
-  ENEMY_TIER_UNLOCK_PLAYER_TIER,
+  DEFAULT_GAME_CONFIG,
   getEnemyDefeatScore,
   getFriendlyMergeScore,
   getMonsterStats,
@@ -48,8 +47,8 @@ function swap(state: GameState, first: Target, second: Target): GameState {
 
 function typeChange(state: GameState, target: Target): GameState {
   const monster = monsterAt(state, target)
-  const typeId = getNextPlayerType(monster.typeId)
-  const { maxHp, atk } = getMonsterStats(typeId, monster.tier)
+  const typeId = getNextPlayerType(monster.typeId, state)
+  const { maxHp, atk } = getMonsterStats(typeId, monster.tier, state.config)
   const hp = Math.max(1, Math.round(maxHp * monster.hp / monster.maxHp))
 
   return withCells(state, [target.index, { ...monster, typeId, maxHp, atk, hp }])
@@ -59,8 +58,8 @@ function fusion(state: GameState, base: Target, material: Target): GameState {
   const monster = monsterAt(state, base)
 
   return withCells(
-    { ...state, score: state.score + getFriendlyMergeScore(monster.tier) },
-    [base.index, raiseTier(monster)],
+    { ...state, score: state.score + getFriendlyMergeScore(monster.tier, state.config) },
+    [base.index, raiseTier(monster, state)],
     [material.index, null]
   )
 }
@@ -76,7 +75,7 @@ function heal(state: GameState, target: Target): GameState {
 }
 
 function evolve(state: GameState, target: Target): GameState {
-  return withCells(state, [target.index, raiseTier(monsterAt(state, target))])
+  return withCells(state, [target.index, raiseTier(monsterAt(state, target), state)])
 }
 
 export const SPELLS: Record<SpellId, SpellDefinition> = {
@@ -202,7 +201,7 @@ export function castSpell(state: GameState, slot: number, targets: Target[]): Sp
     spellSlots: state.spellSlots.with(slot, null)
   }, ...targets)
   const reachedUnlockTier = next.cells.some(monster =>
-    monster?.faction === 'player' && monster.tier >= ENEMY_TIER_UNLOCK_PLAYER_TIER
+    monster?.faction === 'player' && monster.tier >= (state.config ?? DEFAULT_GAME_CONFIG).enemyTierUnlockPlayerTier
   )
 
   return {
@@ -262,21 +261,21 @@ function damage(state: GameState, indices: number[], damage: number): GameState 
 function rewardDefeat(state: GameState, enemy: Monster): GameState {
   return {
     ...state,
-    score: state.score + getEnemyDefeatScore(enemy.tier),
-    gold: state.gold + ENEMY_DEFEAT_REWARD.gold,
-    xp: state.xp + ENEMY_DEFEAT_REWARD.xp
+    score: state.score + getEnemyDefeatScore(enemy.tier, state.config),
+    gold: state.gold + (state.config ?? DEFAULT_GAME_CONFIG).enemyDefeatReward.gold,
+    xp: state.xp + (state.config ?? DEFAULT_GAME_CONFIG).enemyDefeatReward.xp
   }
 }
 
-function raiseTier(monster: Monster): Monster {
+function raiseTier(monster: Monster, state: GameState): Monster {
   const tier = monster.tier + 1
-  const { maxHp, atk } = getMonsterStats(monster.typeId, tier)
+  const { maxHp, atk } = getMonsterStats(monster.typeId, tier, state.config)
 
   return { ...monster, tier, maxHp, atk, hp: maxHp }
 }
 
-function getNextPlayerType(typeId: string): string {
-  const typeIds = getMonsterTypeIds('player')
+function getNextPlayerType(typeId: string, state: GameState): string {
+  const typeIds = getMonsterTypeIds('player', state.config)
   const next = typeIds[(typeIds.indexOf(typeId) + 1) % typeIds.length]
   if (!next) {
     throw new Error('Cannot change type without configured player monster types')

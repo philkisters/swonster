@@ -144,7 +144,7 @@ export function resolveCombat(state: GameState, direction: Direction): CombatRes
   const defeatedEnemies = [...activeResult.deaths, ...counterResult.deaths]
     .filter(monster => monster.faction === 'enemy')
   const enemyDefeatScore = defeatedEnemies.reduce(
-    (score, monster) => score + getEnemyDefeatScore(monster.tier),
+    (score, monster) => score + getEnemyDefeatScore(monster.tier, state.config),
     0
   )
 

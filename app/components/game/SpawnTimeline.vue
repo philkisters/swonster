@@ -67,6 +67,7 @@
 
 <script setup lang="ts">
 import { getMonsterDefinition, getMonsterHeadSprite } from '~~/game/config'
+import type { GameConfig } from '~~/game/config'
 import type { SpawnEntry } from '~~/game/types'
 
 const SLOT_SCALES = [1.4, 1.0, 0.9, 0.8, 0.68, 0.56, 0.46, 0.36]
@@ -79,6 +80,7 @@ const props = defineProps<{
   history: readonly SpawnEntry[]
   queue: readonly SpawnEntry[]
   turn: number
+  config?: GameConfig
 }>()
 const { app } = useRuntimeConfig()
 
@@ -129,8 +131,8 @@ const slots = computed(() => {
         '--spawn-y': CURVE_DEPTH * distance ** 2,
         'z-index': RENDERED_DISTANCE - distance
       },
-      sprite: `${app.baseURL}${getMonsterHeadSprite(spawn.typeId, spawn.tier).replace(/^\//, '')}`,
-      label: `${getTimingLabel(offset)}: ${kindLabel}, ${getMonsterDefinition(spawn.typeId).name}, level ${spawn.tier}`
+      sprite: `${app.baseURL}${getMonsterHeadSprite(spawn.typeId, spawn.tier, props.config).replace(/^\//, '')}`,
+      label: `${getTimingLabel(offset)}: ${kindLabel}, ${getMonsterDefinition(spawn.typeId, props.config).name}, level ${spawn.tier}`
     })
   }
 

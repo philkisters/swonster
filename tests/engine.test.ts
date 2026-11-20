@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createSpawnQueue } from '../game/spawning'
 import { createSpellSlots } from '../game/spellSlots'
 import { executeTurn } from '../game/engine'
+import { DEFAULT_GAME_CONFIG } from '../game/config'
 import type { Faction, GameState, Monster } from '../game/types'
 
 function createMonster(
@@ -45,6 +46,22 @@ function createState(monsters: [number, Monster][]): GameState {
 }
 
 describe('game-over conditions', () => {
+  it('uses the run configuration for combat rewards and spell refills', () => {
+    const state = createState([
+      [0, createMonster('player', 'player', { atk: 10 })],
+      [1, createMonster('enemy', 'enemy', { hp: 1 })]
+    ])
+    state.config = {
+      ...DEFAULT_GAME_CONFIG,
+      spellRefillInterval: 1,
+      enemyDefeatReward: { score: 40, gold: 7, xp: 9 }
+    }
+
+    const result = executeTurn(state, 'right')
+    expect(result.state).toMatchObject({ score: 40, gold: 7, xp: 9 })
+    expect(result.state.spellSlots.filter(Boolean)).toHaveLength(1)
+  })
+
   it('spawns normally when the last friendly monster dies', () => {
     const state = createState([
       [0, createMonster('enemy', 'enemy')],

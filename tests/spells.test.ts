@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getMonsterStats, SPELL_REFILL_INTERVAL, SPELL_SLOT_COUNT } from '../game/config'
+import { DEFAULT_GAME_CONFIG, getMonsterStats, SPELL_REFILL_INTERVAL, SPELL_SLOT_COUNT } from '../game/config'
 import { executeTurn } from '../game/engine'
 import { createInitialState } from '../game/initialState'
 import { createSpawnQueue } from '../game/spawning'
@@ -69,6 +69,14 @@ describe('buying spells', () => {
 })
 
 describe('spell effects', () => {
+  it('uses the run configuration when a spell defeats an enemy', () => {
+    const state = createState('fireball', [[1, createMonster('weak', 'enemy', { hp: 1 })]])
+    state.config = { ...DEFAULT_GAME_CONFIG, enemyDefeatReward: { score: 25, gold: 7, xp: 9 } }
+
+    const result = castSpell(state, 0, [cell(1)]).state
+    expect(result).toMatchObject({ score: 25, gold: STARTING_GOLD - SPELLS.fireball.cost + 7, xp: 9 })
+  })
+
   it('fireball damages one enemy and rewards a kill', () => {
     const tough = createMonster('tough', 'enemy', { tier: 2, hp: 12, maxHp: 12 })
     const weak = createMonster('weak', 'enemy', { hp: FIREBALL_DAMAGE })

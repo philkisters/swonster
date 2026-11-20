@@ -1,11 +1,13 @@
-import { BOARD_HEIGHT, BOARD_WIDTH, getMonsterDefinition, getMonsterStats } from './config'
+import { DEFAULT_GAME_CONFIG, getMonsterDefinition, getMonsterStats } from './config'
+import type { GameConfig } from './config'
 import { createSpawnQueue } from './spawning'
 import { createSpellSlots, refillSpellSlot } from './spellSlots'
+import { chooseRunSeed } from './rng'
 import type { GameState, Monster } from './types'
 
-function createMonster(id: string, typeId: string): Monster {
-  const stats = getMonsterStats(typeId, 1)
-  const definition = getMonsterDefinition(typeId)
+function createMonster(id: string, typeId: string, config: GameConfig): Monster {
+  const stats = getMonsterStats(typeId, 1, config)
+  const definition = getMonsterDefinition(typeId, config)
 
   return {
     id,
@@ -19,25 +21,21 @@ function createMonster(id: string, typeId: string): Monster {
   }
 }
 
-export function createInitialState(seed?: number): GameState {
-  const cells: GameState['cells'] = Array(BOARD_WIDTH * BOARD_HEIGHT).fill(null)
-  const spawnState = createSpawnQueue(seed)
+export function createInitialState(seed?: number, config: GameConfig = DEFAULT_GAME_CONFIG): GameState {
+  const initialSeed = seed ?? chooseRunSeed(config.rngSeed)
+  const cells: GameState['cells'] = Array(config.boardWidth * config.boardHeight).fill(null)
+  const spawnState = createSpawnQueue(initialSeed, config)
   const place = (x: number, y: number, monster: Monster) => {
-    cells[y * BOARD_WIDTH + x] = monster
+    cells[y * config.boardWidth + x] = monster
   }
 
-  place(0, 1, createMonster('player-dragon-1', 'dragon'))
-  place(3, 1, createMonster('enemy-skeleton-dragon-1', 'skeletDragon'))
-  place(0, 3, createMonster('player-griffin-1', 'griffin'))
-  place(2, 3, createMonster('player-griffin-2', 'griffin'))
-  place(1, 1, createMonster('enemy-skeleton-dragon-2', 'skeletDragon'))
-  place(2, 1, createMonster('enemy-skeleton-dragon-3', 'skeletDragon'))
-  place(3, 0, createMonster('enemy-skeleton-dragon-4', 'skeletDragon'))
-  place(0, 2, createMonster('enemy-skeleton-dragon-5', 'skeletDragon'))
+  place(0, 1, createMonster('player-dragon-1', 'dragon', config))
+  place(3, 3, createMonster('enemy-skeleton-dragon-1', 'skeletDragon', config))
 
   return {
-    width: BOARD_WIDTH,
-    height: BOARD_HEIGHT,
+    config,
+    width: config.boardWidth,
+    height: config.boardHeight,
     cells,
     turn: 0,
     score: 0,
@@ -46,6 +44,6 @@ export function createInitialState(seed?: number): GameState {
     enemyTierUnlockTurn: null,
     gameOver: false,
     ...spawnState,
-    ...refillSpellSlot(createSpellSlots(seed))
+    ...refillSpellSlot(createSpellSlots(initialSeed, config))
   }
 }

@@ -67,10 +67,10 @@ export function slideAndMerge(
       }
 
       if (!mergedAt.has(next) && canMerge(blocker, monster)) {
-        const result = mergeMonsters(blocker, monster, state.turn + 1, next)
+        const result = mergeMonsters(blocker, monster, state.turn + 1, next, state.config)
         cells[next] = result.monster
         if (monster.faction === 'player') {
-          mergeScore += getFriendlyMergeScore(monster.tier)
+          mergeScore += getFriendlyMergeScore(monster.tier, state.config)
         }
         mergedAt.add(next)
         if (from !== next) {

@@ -5,6 +5,7 @@ import {
   collectionGroup,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   getFirestore,
   limit,
@@ -17,9 +18,18 @@ import {
 } from 'firebase/firestore'
 import type { DocumentReference, Firestore } from 'firebase/firestore'
 import type { GameState } from '~~/game/types'
+import { parseAvailableConfig } from '../../game/configValidation'
+import type { AvailableConfig } from '../../game/configValidation'
 import type { GameAction } from './useGame'
 
 export type HistoryOrder = 'latest' | 'best-personal' | 'best-global'
+
+export class ArchivedConfigError extends Error {
+  constructor() {
+    super('This configuration is archived. Return to the menu and choose another.')
+    this.name = 'ArchivedConfigError'
+  }
+}
 
 export interface GameHistoryEntry {
   id: string
@@ -154,7 +164,24 @@ export function useGameTracking() {
     }
   }
 
-  async function loadHistory(order: HistoryOrder): Promise<GameHistoryEntry[]> {
+  async function loadConfigs(includeArchived = false): Promise<AvailableConfig[]> {
+    if (!database || !ready.value) throw new Error('Connect to Firebase before loading configurations.')
+    const snapshot = await getDocs(collection(database, 'configs'))
+    return snapshot.docs.map(entry => parseAvailableConfig(entry.id, entry.data()))
+      .filter(config => includeArchived || !config.archived)
+      .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+  }
+
+  async function loadConfig(id: string): Promise<AvailableConfig> {
+    if (!database || !ready.value) throw new Error('Connect to Firebase before loading a configuration.')
+    const snapshot = await getDocFromServer(doc(database, 'configs', id))
+    if (!snapshot.exists()) throw new Error(`Game configuration not found: ${id}`)
+    const config = parseAvailableConfig(id, snapshot.data())
+    if (config.archived) throw new ArchivedConfigError()
+    return config
+  }
+
+  async function loadHistory(order: HistoryOrder, configId?: string): Promise<GameHistoryEntry[]> {
     if (!database || !playerId || !ready.value) {
       throw new Error('Connect to Firebase before loading your history.')
     }
@@ -162,16 +189,18 @@ export function useGameTracking() {
     const games = order === 'best-global'
       ? collectionGroup(database, 'games')
       : collection(database, 'players', playerId, 'games')
-    const historyQuery = order === 'latest'
-      ? query(games, orderBy('startTime', 'desc'), limit(10))
-      : query(
-          games,
-          where('status', '==', 'game-over'),
-          orderBy('highScore', 'desc'),
-          limit(10),
-        )
+    const constraints = [
+      ...(configId && configId !== '__legacy__' ? [where('configId', '==', configId)] : []),
+      ...(order === 'latest' ? [] : [where('status', '==', 'game-over')]),
+      orderBy(order === 'latest' ? 'startTime' : 'highScore', 'desc'),
+      ...(configId === '__legacy__' ? [] : [limit(10)]),
+    ]
+    const historyQuery = query(games, ...constraints)
     const snapshot = await getDocs(historyQuery)
-    const entries = await Promise.all(snapshot.docs.map(async (entry) => {
+    const matchingDocs = snapshot.docs
+      .filter(entry => configId !== '__legacy__' || !('configId' in entry.data()))
+    const entries = await Promise.all((configId === '__legacy__' ? matchingDocs.slice(0, 10) : matchingDocs)
+      .map(async (entry) => {
       const data = entry.data()
       const startTime = typeof data.startTime === 'number' ? data.startTime : 0
       const endTime = typeof data.endTime === 'number' ? data.endTime : null
@@ -196,7 +225,7 @@ export function useGameTracking() {
         highScore,
         status,
       }
-    }))
+      }))
 
     if (order === 'latest') return entries.slice(0, 10)
 
@@ -207,7 +236,7 @@ export function useGameTracking() {
       .slice(0, 10)
   }
 
-  function begin() {
+  function begin(initialSeed: number, config?: AvailableConfig) {
     session = undefined
     if (!database || !playerId || !ready.value) return false
     const reference = doc(collection(database, 'players', playerId, 'games'))
@@ -221,6 +250,8 @@ export function useGameTracking() {
         score: 0,
         highScore: 0,
         status: 'active',
+        initialSeed,
+        ...(config ? { configId: config.id, configName: config.name, config: config.rules } : {}),
       }),
     )
     return true
@@ -277,6 +308,8 @@ export function useGameTracking() {
     connect,
     saveUsername,
     loadHistory,
+    loadConfigs,
+    loadConfig,
     begin,
     record,
     end,
