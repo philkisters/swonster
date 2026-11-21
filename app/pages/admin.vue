@@ -71,6 +71,7 @@
             <label for="config-rules">Rules JSON</label>
             <textarea id="config-rules" v-model="rulesJson" required rows="18" spellcheck="false" />
             <small><code>startingPlayerMonsterCount</code> and <code>startingEnemyMonsterCount</code> control the initial roster; set the enemy count to 0 for no starting enemies. Starting positions and types are selected deterministically from the run seed. Use <code>playerMonsterTypes</code> to control player monster types.</small>
+            <small><code>availableSpells</code> controls which spells can appear; an empty list disables spells. <code>spellCostModifier</code> multiplies their costs, rounded to the nearest gold.</small>
             <p v-if="publishError" class="admin-error" role="alert">{{ publishError }}</p>
             <p v-if="published" role="status">{{ published }}</p>
             <div class="admin-actions">

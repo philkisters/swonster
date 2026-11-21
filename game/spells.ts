@@ -182,14 +182,21 @@ export const SPELLS: Record<SpellId, SpellDefinition> = {
   }
 }
 
+export function getSpellCost(spellId: SpellId, modifier = 1): number {
+  return Math.round(SPELLS[spellId].cost * modifier)
+}
+
 /** Buys the spell in a slot and casts it on the chosen targets. Casting does not use up a turn. */
 export function castSpell(state: GameState, slot: number, targets: Target[]): SpellResult {
+  const config = state.config ?? DEFAULT_GAME_CONFIG
   const spellId = state.spellSlots[slot]
   const spell = spellId ? SPELLS[spellId] : null
+  const cost = spellId ? getSpellCost(spellId, config.spellCostModifier) : 0
   if (
-    !spell
+    !spell || !spellId
+    || !config.availableSpells.includes(spellId)
     || state.gameOver
-    || state.gold < spell.cost
+    || state.gold < cost
     || !isValidSelection(state, spell.targets, targets)
   ) {
     return { state, valid: false }
@@ -197,7 +204,7 @@ export function castSpell(state: GameState, slot: number, targets: Target[]): Sp
 
   const next = spell.cast({
     ...state,
-    gold: state.gold - spell.cost,
+    gold: state.gold - cost,
     spellSlots: state.spellSlots.with(slot, null)
   }, ...targets)
   const reachedUnlockTier = next.cells.some(monster =>

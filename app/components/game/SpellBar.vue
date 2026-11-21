@@ -20,7 +20,7 @@
           }"
           :disabled="disabled"
           :aria-pressed="targeting?.slot === slot"
-          :aria-label="`${card.spell.name}, ${card.spell.cost} gold`"
+          :aria-label="`${card.spell.name}, ${card.cost} gold`"
           @pointerdown="startPress(slot)"
           @pointerup="endPress"
           @pointerleave="endPress"
@@ -46,7 +46,7 @@
               :src="spriteUrl('/sprites/ui/gold.png')"
               alt=""
             >
-            {{ card.spell.cost }}
+            {{ card.cost }}
           </span>
         </button>
       </li>
@@ -77,7 +77,7 @@
                   :src="spriteUrl('/sprites/ui/gold.png')"
                   alt="Gold"
                 >
-                {{ shownCard.spell.cost }}
+                {{ shownCard.cost }}
               </span>
             </p>
             <p class="spell-detail-description">

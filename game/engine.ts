@@ -34,7 +34,7 @@ export function executeTurn(state: GameState, direction: Direction): TurnResult 
     cells: movement.cells,
     turn,
     score: state.score + movement.score,
-    ...(turn % config.spellRefillInterval === 0 ? refillSpellSlot(state) : {}),
+    ...(turn % config.spellRefillInterval === 0 ? refillSpellSlot(state, config) : {}),
     enemyTierUnlockTurn: state.enemyTierUnlockTurn ?? (unlockedEnemyTiers ? state.turn + 1 : null)
   }
   const stateAfterActiveAttacks: GameState = {

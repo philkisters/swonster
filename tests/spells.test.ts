@@ -4,7 +4,7 @@ import { executeTurn } from '../game/engine'
 import { createInitialState } from '../game/initialState'
 import { createSpawnQueue } from '../game/spawning'
 import { createSpellSlots, refillSpellSlot } from '../game/spellSlots'
-import { castSpell, FIREBALL_BARRAGE_DAMAGE, FIREBALL_DAMAGE, SPELLS } from '../game/spells'
+import { castSpell, FIREBALL_BARRAGE_DAMAGE, FIREBALL_DAMAGE, getSpellCost, SPELLS } from '../game/spells'
 import type { Target } from '../game/targeting'
 import type { Faction, GameState, Monster, SpellId } from '../game/types'
 
@@ -65,6 +65,24 @@ describe('buying spells', () => {
     expect(castSpell(state, 0, [cell(2)]).valid).toBe(false)
     expect(castSpell(state, 0, []).valid).toBe(false)
     expect(castSpell({ ...state, gameOver: true }, 0, [cell(1)]).valid).toBe(false)
+  })
+
+  it('uses the rounded configured cost for affordability and payment', () => {
+    const state = createState('heal', [[0, createMonster('ally', 'player', { hp: 1 })]], 7)
+    state.config = { ...DEFAULT_GAME_CONFIG, spellCostModifier: 0.5 }
+    expect(getSpellCost('heal', 0.5)).toBe(8)
+    expect(castSpell(state, 0, [cell(0)]).valid).toBe(false)
+    expect(castSpell({ ...state, gold: 8 }, 0, [cell(0)]).state.gold).toBe(0)
+    const free = { ...state, gold: 0, config: { ...state.config, spellCostModifier: 0 } }
+    expect(castSpell(free, 0, [cell(0)]).valid).toBe(true)
+    const expensive = { ...state, gold: 30, config: { ...state.config, spellCostModifier: 2 } }
+    expect(castSpell(expensive, 0, [cell(0)]).state.gold).toBe(0)
+  })
+
+  it('rejects a spell excluded from the run configuration', () => {
+    const state = createState('heal', [[0, createMonster('ally', 'player', { hp: 1 })]])
+    state.config = { ...DEFAULT_GAME_CONFIG, availableSpells: ['fireball'] }
+    expect(castSpell(state, 0, [cell(0)])).toEqual({ state, valid: false })
   })
 })
 
@@ -236,6 +254,32 @@ describe('spell effects', () => {
 })
 
 describe('spell slots', () => {
+  it('deals only configured spells at setup and on later turns', () => {
+    const config = {
+      ...DEFAULT_GAME_CONFIG,
+      spellRefillInterval: 1,
+      availableSpells: ['heal', 'fireball'] satisfies SpellId[]
+    }
+    const state = createInitialState(42, config)
+    expect(config.availableSpells).toContain(state.spellSlots[0])
+    const result = executeTurn(state, 'left')
+    expect(result.valid).toBe(true)
+    expect(result.state.spellSlots.filter(Boolean)).toHaveLength(2)
+    expect(result.state.spellSlots.filter(Boolean).every(id => id !== null && config.availableSpells.includes(id))).toBe(true)
+    expect(refillSpellSlot(result.state, config)).toEqual({
+      spellSlots: result.state.spellSlots,
+      spellRngSeed: result.state.spellRngSeed
+    })
+  })
+
+  it('leaves slots empty and does not advance the spell RNG when spells are disabled', () => {
+    const config = { ...DEFAULT_GAME_CONFIG, availableSpells: [] }
+    const state = createInitialState(42, config)
+    expect(state.spellSlots.every(slot => slot === null)).toBe(true)
+    expect(state.spellRngSeed).toBe(createSpellSlots(42, config).spellRngSeed)
+    expect(refillSpellSlot(state, config)).toEqual(createSpellSlots(42, config))
+  })
+
   it('starts with one spell and deals one more every few valid turns', () => {
     const state = createInitialState(42)
     const offTurn = executeTurn(state, 'left')

@@ -78,6 +78,6 @@ export function createInitialState(seed?: number, config: GameConfig = DEFAULT_G
     enemyTierUnlockTurn: null,
     gameOver: false,
     ...spawnState,
-    ...refillSpellSlot(createSpellSlots(initialSeed, config))
+    ...refillSpellSlot(createSpellSlots(initialSeed, config), config)
   }
 }

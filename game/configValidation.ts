@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+export const SPELL_IDS = [
+  'fireball', 'fireballBarrage', 'move', 'swap', 'superMove', 'superSwap',
+  'typeChange', 'fusion', 'convertEnemy', 'heal', 'evolve'
+] as const
+export const spellIdSchema = z.enum(SPELL_IDS)
+
 const monsterTypeSchema = z.looseObject({
   name: z.string().refine(value => value.trim().length > 0, 'Name must not be blank'),
   faction: z.enum(['player', 'enemy']),
@@ -50,6 +56,8 @@ export const gameConfigSchema = z.looseObject({
   enemyTierUnlockPlayerTier: z.number().int().min(1).max(100),
   spellSlotCount: z.number().int().min(1).max(11),
   spellRefillInterval: z.number().int().min(1).max(10000),
+  availableSpells: z.array(spellIdSchema).readonly().default(() => [...SPELL_IDS]),
+  spellCostModifier: z.number().min(0).max(100000).default(1),
   monsterTypes: monsterTypesSchema,
   playerMonsterTypes: z.array(z.string().min(1)).min(1).readonly().default(['dragon', 'griffin'])
 }).superRefine((config, ctx) => {
@@ -59,6 +67,10 @@ export const gameConfigSchema = z.looseObject({
       path: ['startingEnemyMonsterCount'],
       message: 'Starting monsters must fit on the board'
     })
+  }
+
+  if (new Set(config.availableSpells).size !== config.availableSpells.length) {
+    ctx.addIssue({ code: 'custom', path: ['availableSpells'], message: 'Available spells must be unique' })
   }
 
   const seen = new Set<string>()
@@ -93,6 +105,8 @@ export function isGameConfig(value: unknown): value is GameConfig {
   return typeof value === 'object'
     && value !== null
     && 'playerMonsterTypes' in value
+    && 'availableSpells' in value
+    && 'spellCostModifier' in value
     && gameConfigSchema.safeParse(value).success
 }
 

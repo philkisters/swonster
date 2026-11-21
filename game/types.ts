@@ -1,21 +1,11 @@
 import type { GameConfig } from './config'
+import type { SPELL_IDS } from './configValidation'
 
 export type Direction = 'up' | 'down' | 'left' | 'right'
 export type Faction = 'player' | 'enemy'
 export type SpawnKind = 'friend' | 'enemy' | 'boss'
 export type GameOverReason = 'board-full' | 'no-friendly-monsters'
-export type SpellId
-  = | 'fireball'
-    | 'fireballBarrage'
-    | 'move'
-    | 'swap'
-    | 'superMove'
-    | 'superSwap'
-    | 'typeChange'
-    | 'fusion'
-    | 'convertEnemy'
-    | 'heal'
-    | 'evolve'
+export type SpellId = typeof SPELL_IDS[number]
 
 export interface Monster {
   id: string

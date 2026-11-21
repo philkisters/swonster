@@ -4,6 +4,7 @@ import { isGameConfig, parseAvailableConfig } from '../game/configValidation'
 import { createInitialState } from '../game/initialState'
 import { slideAndMerge } from '../game/movement'
 import { nextSpawnEntry } from '../game/spawning'
+import { gameStateSchema } from '../game/stateValidation'
 
 describe('monster sprites', () => {
   it.each([
@@ -73,6 +74,25 @@ describe('monster sprites', () => {
       expect(parseAvailableConfig('archived', { name: 'Archived', rules: DEFAULT_GAME_CONFIG, archived: true }).archived).toBe(true)
       expect(() => parseAvailableConfig('invalid', { name: 'Invalid', rules: DEFAULT_GAME_CONFIG, archived: 'true' }))
         .toThrow(/archived/)
+    })
+
+    it('defaults legacy spell settings and validates configured spell lists and costs', () => {
+      const { availableSpells: _spells, spellCostModifier: _modifier, ...legacyRules } = DEFAULT_GAME_CONFIG
+      const rules = parseAvailableConfig('legacy-spells', { name: 'Legacy', rules: legacyRules }).rules
+      expect(rules.availableSpells).toEqual(DEFAULT_GAME_CONFIG.availableSpells)
+      expect(rules.spellCostModifier).toBe(1)
+      const state = createInitialState(42)
+      expect(gameStateSchema.parse({ ...state, config: legacyRules }).config).toMatchObject({
+        availableSpells: DEFAULT_GAME_CONFIG.availableSpells,
+        spellCostModifier: 1
+      })
+      expect(isGameConfig(legacyRules)).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, availableSpells: [] })).toBe(true)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, availableSpells: ['unknown'] })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, availableSpells: ['heal', 'heal'] })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, spellCostModifier: 0 })).toBe(true)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, spellCostModifier: -1 })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, spellCostModifier: Infinity })).toBe(false)
     })
 
     it('rejects non-finite numbers and preserves additional fields in valid rules', () => {

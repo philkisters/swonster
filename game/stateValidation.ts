@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { gameConfigSchema } from './configValidation'
+import { gameConfigSchema, spellIdSchema } from './configValidation'
 
 const spawnEntrySchema = z.object({
   kind: z.enum(['friend', 'enemy', 'boss']),
@@ -31,10 +31,7 @@ export const gameStateSchema = z.object({
   enemyTierUnlockTurn: z.number().int().nonnegative().nullable(),
   spawnQueue: z.array(spawnEntrySchema),
   rngSeed: z.number().int(),
-  spellSlots: z.array(z.enum([
-    'fireball', 'fireballBarrage', 'move', 'swap', 'superMove', 'superSwap',
-    'typeChange', 'fusion', 'convertEnemy', 'heal', 'evolve',
-  ]).nullable()),
+  spellSlots: z.array(spellIdSchema.nullable()),
   spellRngSeed: z.number().int(),
   gameOver: z.boolean(),
   gameOverReason: z.enum(['board-full', 'no-friendly-monsters']).optional(),

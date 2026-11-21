@@ -1,5 +1,6 @@
 import type { Faction } from './types'
 import type { GameConfig, MonsterTypeDefinition } from './configValidation'
+import { SPELL_IDS } from './configValidation.ts'
 
 export type { GameConfig, MonsterTypeDefinition } from './configValidation'
 
@@ -79,6 +80,8 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   enemyTierUnlockPlayerTier: ENEMY_TIER_UNLOCK_PLAYER_TIER,
   spellSlotCount: SPELL_SLOT_COUNT,
   spellRefillInterval: SPELL_REFILL_INTERVAL,
+  availableSpells: [...SPELL_IDS],
+  spellCostModifier: 1,
   monsterTypes: MONSTER_TYPES,
   playerMonsterTypes: ['dragon', 'griffin']
 }

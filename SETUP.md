@@ -69,6 +69,10 @@ spell. Set
 `startingPlayerMonsterCount` and `startingEnemyMonsterCount` to configure the
 initial roster; they default to 1 each, and the enemy count can be 0. Starting
 monster positions and types are selected deterministically from the run seed.
+Set `availableSpells` to the desired unique spell IDs from the default rules;
+an empty array disables spells. `spellCostModifier` multiplies all spell costs,
+rounded to the nearest whole gold; it accepts values from 0 to 100000. Zero
+makes spells free and 1 is the default.
 Older configurations without these fields retain the defaults. Sprite
 prefixes must correspond to deployed sprites.
 

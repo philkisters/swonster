@@ -1,5 +1,5 @@
 import type { DeepReadonly, Ref } from 'vue'
-import { SPELLS } from '~~/game/spells'
+import { getSpellCost, SPELLS } from '~~/game/spells'
 import type { SpellDefinition } from '~~/game/spells'
 import { getTargetOptions, hasTargets, isSameTarget } from '~~/game/targeting'
 import type { Target } from '~~/game/targeting'
@@ -8,6 +8,7 @@ import type { GameState, SpellId } from '~~/game/types'
 export interface SpellCard {
   spellId: SpellId
   spell: SpellDefinition
+  cost: number
   status: 'ready' | 'too-expensive' | 'no-target'
 }
 
@@ -37,11 +38,12 @@ export function useSpellCasting(
     if (!spellId) return null
 
     const spell = SPELLS[spellId]
-    const status = state.value.gold < spell.cost
+    const cost = getSpellCost(spellId, state.value.config?.spellCostModifier)
+    const status = state.value.gold < cost
       ? 'too-expensive'
       : hasTargets(state.value, spell.targets) ? 'ready' : 'no-target'
 
-    return { spellId, spell, status }
+    return { spellId, spell, cost, status }
   }))
 
   const targeting = computed((): SpellTargeting | null => {
