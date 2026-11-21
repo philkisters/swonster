@@ -137,7 +137,7 @@ describe('game tracking', () => {
     )
   })
 
-  it('keeps archived configurations in history lists but rejects them for new games', async () => {
+  it('filters archived configurations by default but allows explicitly listing them', async () => {
     const tracking = useGameTracking()
     await tracking.connect()
     firebase.getDocs.mockResolvedValue({

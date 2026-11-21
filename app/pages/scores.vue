@@ -13,11 +13,7 @@
       <h1 id="score-title">Scores</h1>
     </header>
 
-    <label for="score-config">Game configuration</label>
-    <select id="score-config" v-model="selectedConfig" :disabled="configsLoading">
-      <option v-for="config in configs" :key="config.id" :value="config.id">{{ config.name }}{{ config.archived ? ' (archived)' : '' }}</option>
-      <option value="__legacy__">Legacy games</option>
-    </select>
+    <MenuGameModes v-model="selectedConfig" :configs="configs" :disabled="configsLoading" class="w-1/2 mx-auto" />
 
     <div class="game-score-switcher" role="group" aria-label="History order">
       <button
@@ -90,6 +86,7 @@
 <script lang="ts" setup>
 import type { GameHistoryEntry, HistoryOrder } from '~/composables/useGameTracking'
 import type { AvailableConfig } from '~~/game/configValidation'
+import { selectGameMode } from '~/utils/gameModes'
 
 const options: { value: HistoryOrder, label: string }[] = [
   { value: 'latest', label: 'Latest' },
@@ -100,10 +97,10 @@ const options: { value: HistoryOrder, label: string }[] = [
 const route = useRoute()
 const router = useRouter()
 const { app } = useRuntimeConfig()
-const { connect, loadHistory, loadConfigs, ready } = useGameTracking()
+const { connect, loadHistory, loadConfigs, ready, error } = useGameTracking()
 const configs = ref<AvailableConfig[]>([])
 const configsLoading = ref(true)
-const selectedConfig = ref(typeof route.query.config === 'string' ? route.query.config : '__legacy__')
+const selectedConfig = ref(typeof route.query.config === 'string' ? route.query.config : '')
 const requestedView = route.query.view
 const view = ref<HistoryOrder>(
   requestedView === 'best-personal' || requestedView === 'best'
@@ -161,26 +158,31 @@ async function refreshHistory() {
 }
 
 watch([view, selectedConfig], () => {
-  if (!configsLoading.value) void refreshHistory()
-})
+  if (!configsLoading.value && selectedConfig.value) void refreshHistory()
+}, { flush: 'sync' })
 
 onMounted(async () => {
   await connect()
-  if (ready.value) {
-    try {
-      configs.value = await loadConfigs(true)
-      if (selectedConfig.value !== '__legacy__' && !configs.value.some(config => config.id === selectedConfig.value)) {
-        selectedConfig.value = '__legacy__'
-      }
-    } catch (cause) {
-      console.error('Could not load game configurations.', cause)
-      historyError.value = 'Could not load game configurations. Return to the menu and try again.'
+  if (!ready.value) {
+    historyError.value = error.value
+    configsLoading.value = false
+    loading.value = false
+    return
+  }
+  try {
+    configs.value = await loadConfigs()
+    selectedConfig.value = selectGameMode(configs.value, selectedConfig.value)
+    if (!selectedConfig.value) {
+      historyError.value = 'No active game configurations are available.'
       loading.value = false
       return
-    } finally {
-      configsLoading.value = false
     }
-  } else {
+  } catch (cause) {
+    console.error('Could not load game configurations.', cause)
+    historyError.value = 'Could not load game configurations. Return to the menu and try again.'
+    loading.value = false
+    return
+  } finally {
     configsLoading.value = false
   }
   await refreshHistory()

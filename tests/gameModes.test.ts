@@ -13,6 +13,8 @@ describe('game modes', () => {
     const configs = [{ id: 'default-dragon-v1' }, { id: 'default-2-types-v2' }]
     expect(selectGameMode(configs, '')).toBe('default-2-types-v2')
     expect(selectGameMode(configs, 'default-dragon-v1')).toBe('default-dragon-v1')
+    expect(selectGameMode(configs, '__legacy__')).toBe('default-2-types-v2')
+    expect(selectGameMode(configs, 'archived-v1')).toBe('default-2-types-v2')
     expect(selectGameMode([{ id: 'custom' }], 'missing')).toBe('custom')
     expect(selectGameMode([], '')).toBe('')
   })

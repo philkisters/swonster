@@ -79,8 +79,8 @@ prefixes must correspond to deployed sprites.
 Use a **new ID for every rules change**: scores are grouped by configuration
 ID, and changing a published document would mix incomparable scores. Games
 also save a copy of their rules and the actual `initialSeed` used for the run.
-Existing games without a configuration are available under **Legacy games** in
-the score view. Set `rngSeed` to `null` to generate a random seed for each new
+Existing games without a configuration are not shown in the score view.
+Set `rngSeed` to `null` to generate a random seed for each new
 game (the default), or to an integer from 0 to 4294967295 for a fixed seed.
 Fixed seeds make runs reproducible, so an administrator can publish separate
 dated configurations for daily challenges. Scores for a random-seed config share
@@ -96,7 +96,7 @@ without a trailing version such as `-v1`. Configurations without a matching
 image use a cog and their name. The `default-2-types` mode is selected by
 default when available.
 Admins can archive or restore configurations on `/admin`. Archived configs are
-hidden from the new-game menu, but remain available in score history. Games
+hidden from the new-game menu and score history. Games
 already in progress can finish; starting or restarting a saved game checks the
 latest archive status. Older clients may still offer archived configs, so this
 is a selection control rather than a security restriction.
