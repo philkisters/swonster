@@ -36,12 +36,31 @@
       </button>
       <p v-if="activeGameError" class="game-menu-error" role="alert">{{ activeGameError }}</p>
       <button v-if="activeGameError" type="button" @click="loadActive">Retry loading saved game</button>
-      <label for="game-config">Game configuration</label>
-      <select id="game-config" v-model="selectedConfig" :disabled="configsLoading">
-        <option v-for="config in configs" :key="config.id" :value="config.id">
-          {{ config.name }}
-        </option>
-      </select>
+      <div class="game-modes" role="group" aria-label="Game configuration">
+        <button
+          v-for="config in configs"
+          :key="config.id"
+          type="button"
+          class="game-mode"
+          :class="{ 'game-mode-selected': selectedConfig === config.id }"
+          :disabled="configsLoading"
+          :aria-label="`${config.name} (${config.id})`"
+          :aria-pressed="selectedConfig === config.id"
+          :title="config.name"
+          @click="selectedConfig = config.id"
+        >
+          <img
+            v-if="!failedSprites.has(config.id)"
+            :src="spriteUrl(gameModeSpritePath(config.id))"
+            alt=""
+            @error="failedSprites.add(config.id)"
+          />
+          <span v-else class="game-mode-fallback">
+            <UIcon name="i-lucide-cog" class="game-mode-icon" aria-hidden="true" />
+            <span>{{ config.name }}</span>
+          </span>
+        </button>
+      </div>
       <p v-if="configError" class="game-menu-error" role="alert">{{ configError }}</p>
       <button v-if="configError" type="button" @click="loadAvailableConfigs">Retry loading configurations</button>
       <button
@@ -84,6 +103,7 @@
 
 <script setup lang="ts">
 import type { AvailableConfig } from '~~/game/configValidation'
+import { gameModeSpritePath, selectGameMode } from '~/utils/gameModes'
 
 const {
   username,
@@ -98,8 +118,10 @@ const {
 } = useGameTracking()
 
 const router = useRouter()
+const spriteUrl = useSpriteUrl()
 const configs = ref<AvailableConfig[]>([])
 const selectedConfig = ref('')
+const failedSprites = ref(new Set<string>())
 const configError = ref('')
 const configsLoading = ref(false)
 const hasActiveGame = ref(false)
@@ -118,9 +140,8 @@ async function loadAvailableConfigs() {
   configError.value = ''
   try {
     configs.value = await loadConfigs()
-    selectedConfig.value = configs.value.some(config => config.id === selectedConfig.value)
-      ? selectedConfig.value
-      : configs.value[0]?.id ?? ''
+    failedSprites.value = new Set()
+    selectedConfig.value = selectGameMode(configs.value, selectedConfig.value)
     if (!configs.value.length) configError.value = 'No active game configurations are available. Ask an administrator to publish or restore one.'
   } catch (cause) {
     console.error('Could not load game configurations.', cause)
@@ -176,7 +197,6 @@ onMounted(() => void connectAndLoad())
 }
 
 .game-menu input,
-.game-menu select,
 .game-menu button {
   padding: 0.7rem;
   border: 1px solid var(--ui-border);
@@ -189,6 +209,47 @@ onMounted(() => void connectAndLoad())
 
 .game-menu button:disabled {
   cursor: wait;
+}
+
+.game-modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.game-menu .game-mode {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 3px solid transparent;
+}
+
+.game-menu .game-mode-selected {
+  border-color: var(--game-gold-text);
+}
+
+.game-mode img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-mode-fallback {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.game-mode-icon {
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
 }
 
 .game-menu-button-primary {

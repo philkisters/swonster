@@ -91,6 +91,10 @@ retain their fixed seeds; publish a new ID to switch one to random seeds.
 The menu requires a published configuration for new saved games. If Firebase
 cannot be reached, **Play without saving** uses the bundled standard rules and
 does not change any saved active game.
+Game-mode images are loaded from `public/sprites/gamemodes` using the config ID
+without a trailing version such as `-v1`. Configurations without a matching
+image use a cog and their name. The `default-2-types` mode is selected by
+default when available.
 Admins can archive or restore configurations on `/admin`. Archived configs are
 hidden from the new-game menu, but remain available in score history. Games
 already in progress can finish; starting or restarting a saved game checks the
