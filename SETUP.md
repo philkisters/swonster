@@ -60,10 +60,17 @@ node --input-type=module -e "import { writeFileSync } from 'node:fs'; import { D
 Edit the template and publish it with
 `node scripts\publish-config.mjs YOUR_PROJECT_ID daily-2026-01-01 "Daily challenge" rules.json`.
 The same Zod schema validates configurations when publishing and when players
-load them; invalid configurations report the affected fields. The
-initial board layout still uses the dragon, griffin and skeletDragon types, so
-these types and their factions are required and both board dimensions must be
-at least four. Sprite prefixes must correspond to deployed sprites.
+load them; invalid configurations report the affected fields. The dragon,
+griffin, and skeletDragon definitions with their standard factions
+are required, and both board dimensions must be at least three. Set
+`playerMonsterTypes` to a non-empty array of configured player monster IDs to
+control the types used by the starting players, player spawns, and type-change
+spell. Set
+`startingPlayerMonsterCount` and `startingEnemyMonsterCount` to configure the
+initial roster; they default to 1 each, and the enemy count can be 0. Starting
+monster positions and types are selected deterministically from the run seed.
+Older configurations without these fields retain the defaults. Sprite
+prefixes must correspond to deployed sprites.
 
 Use a **new ID for every rules change**: scores are grouped by configuration
 ID, and changing a published document would mix incomparable scores. Games

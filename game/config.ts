@@ -67,6 +67,8 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   boardHeight: BOARD_HEIGHT,
   spawnQueueLength: SPAWN_QUEUE_LENGTH,
   spawnTier: SPAWN_TIER,
+  startingPlayerMonsterCount: 1,
+  startingEnemyMonsterCount: 1,
   friendSpawnChance: FRIEND_SPAWN_CHANCE,
   rngSeed: null,
   enemyTierProgression: ENEMY_TIER_PROGRESSION.map(entry => ({ ...entry })),
@@ -77,7 +79,8 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   enemyTierUnlockPlayerTier: ENEMY_TIER_UNLOCK_PLAYER_TIER,
   spellSlotCount: SPELL_SLOT_COUNT,
   spellRefillInterval: SPELL_REFILL_INTERVAL,
-  monsterTypes: MONSTER_TYPES
+  monsterTypes: MONSTER_TYPES,
+  playerMonsterTypes: ['dragon', 'griffin']
 }
 
 export function getMonsterDefinition(typeId: string, config: GameConfig = DEFAULT_GAME_CONFIG): MonsterTypeDefinition {
@@ -90,6 +93,10 @@ export function getMonsterDefinition(typeId: string, config: GameConfig = DEFAUL
 }
 
 export function getMonsterTypeIds(faction: Faction, config: GameConfig = DEFAULT_GAME_CONFIG): string[] {
+  if (faction === 'player') {
+    return config.playerMonsterTypes.filter(typeId => config.monsterTypes[typeId]?.faction === faction)
+  }
+
   return Object.keys(config.monsterTypes).filter(typeId => config.monsterTypes[typeId]?.faction === faction)
 }
 

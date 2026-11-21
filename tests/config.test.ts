@@ -19,11 +19,22 @@ describe('monster sprites', () => {
   describe('published configurations', () => {
     it('validates required rules, probabilities, and starting monster factions', () => {
       expect(isGameConfig(DEFAULT_GAME_CONFIG)).toBe(true)
+      const { playerMonsterTypes: _, ...legacyRules } = DEFAULT_GAME_CONFIG
+      expect(isGameConfig(legacyRules)).toBe(false)
       expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, rngSeed: 0 })).toBe(true)
       expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, rngSeed: -1 })).toBe(false)
       expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, rngSeed: 0x100000000 })).toBe(false)
       expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, spellRefillInterval: 0 })).toBe(false)
-      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, boardWidth: 3 })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, boardWidth: 3 })).toBe(true)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, boardHeight: 3 })).toBe(true)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, boardWidth: 2 })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, boardHeight: 2 })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, startingPlayerMonsterCount: 0 })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, startingEnemyMonsterCount: -1 })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, startingPlayerMonsterCount: 16, startingEnemyMonsterCount: 1 })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, playerMonsterTypes: [] })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, playerMonsterTypes: ['skeletDragon'] })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, playerMonsterTypes: ['dragon', 'dragon'] })).toBe(false)
       expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, enemyTierProgression: [
         { tier: 2, chancePerTurn: 0.1, maxChance: 0.8 },
         { tier: 3, chancePerTurn: 0.1, maxChance: 0.8 }
@@ -38,7 +49,7 @@ describe('monster sprites', () => {
     it('reports the field responsible for an invalid published config', () => {
       expect(() => parseAvailableConfig('bad-board', {
         name: 'Bad board',
-        rules: { ...DEFAULT_GAME_CONFIG, boardWidth: 3 }
+        rules: { ...DEFAULT_GAME_CONFIG, boardWidth: 2 }
       })).toThrow(/bad-board.*rules\.boardWidth/)
       expect(() => parseAvailableConfig('bad-faction', {
         name: 'Bad faction',
@@ -54,6 +65,11 @@ describe('monster sprites', () => {
 
     it('validates archive status while allowing older configs without it', () => {
       expect(parseAvailableConfig('old', { name: 'Old', rules: DEFAULT_GAME_CONFIG }).archived).toBeUndefined()
+      const { playerMonsterTypes: _playerMonsterTypes, ...legacyRules } = DEFAULT_GAME_CONFIG
+      const parsedLegacyRules = parseAvailableConfig('legacy-rules', { name: 'Legacy rules', rules: legacyRules }).rules
+      expect(parsedLegacyRules.playerMonsterTypes).toEqual(['dragon', 'griffin'])
+      expect(parsedLegacyRules.startingPlayerMonsterCount).toBe(1)
+      expect(parsedLegacyRules.startingEnemyMonsterCount).toBe(1)
       expect(parseAvailableConfig('archived', { name: 'Archived', rules: DEFAULT_GAME_CONFIG, archived: true }).archived).toBe(true)
       expect(() => parseAvailableConfig('invalid', { name: 'Invalid', rules: DEFAULT_GAME_CONFIG, archived: 'true' }))
         .toThrow(/archived/)
@@ -75,6 +91,9 @@ describe('monster sprites', () => {
         rngSeed: 42,
         friendSpawnChance: 1,
         friendlyMergeScore: 50,
+        startingPlayerMonsterCount: 2,
+        startingEnemyMonsterCount: 0,
+        playerMonsterTypes: ['griffin'],
         monsterTypes: {
           ...DEFAULT_GAME_CONFIG.monsterTypes,
           griffin: { ...DEFAULT_GAME_CONFIG.monsterTypes.griffin!, baseMaxHp: 20 }
@@ -82,13 +101,35 @@ describe('monster sprites', () => {
       }
       const state = createInitialState(undefined, config)
       expect(state.width).toBe(5)
-      expect(state.cells[15]?.maxHp).toBe(20)
+      const playerMonsters = state.cells.filter(monster => monster?.faction === 'player')
+      expect(playerMonsters).toHaveLength(2)
+      expect(playerMonsters.every(monster => monster.typeId === 'griffin' && monster.maxHp === 20)).toBe(true)
       expect(state.spawnQueue.every(entry => entry.kind === 'friend')).toBe(true)
       expect(nextSpawnEntry(42, 0, config).entry.kind).toBe('friend')
-      const result = slideAndMerge(state, 'left')
+      const playerMonster = playerMonsters[0]
+      if (!playerMonster) throw new Error('Expected starting player monsters')
+      const mergeCells: typeof state.cells = Array(state.cells.length).fill(null)
+      mergeCells[0] = playerMonster
+      mergeCells[1] = { ...playerMonster, id: 'merge-test' }
+      const result = slideAndMerge({ ...state, cells: mergeCells }, 'left')
       expect(result.score).toBe(50)
-      expect(result.cells[15]?.maxHp).toBe(40)
-      expect(createInitialState().cells[12]?.maxHp).toBe(6)
+      expect(result.cells[0]?.maxHp).toBe(40)
+      expect(DEFAULT_GAME_CONFIG.monsterTypes.griffin?.baseMaxHp).toBe(6)
+    })
+
+    it.each(['dragon', 'griffin'] as const)('limits player monsters to configured type %s', (typeId) => {
+      const config = {
+        ...DEFAULT_GAME_CONFIG,
+        friendSpawnChance: 1,
+        playerMonsterTypes: [typeId]
+      }
+      const state = createInitialState(42, config)
+      const initialPlayerTypes = state.cells.flatMap(monster => monster?.faction === 'player' ? [monster.typeId] : [])
+
+      expect(initialPlayerTypes.length).toBeGreaterThan(0)
+      expect(initialPlayerTypes.every(id => id === typeId)).toBe(true)
+      expect(state.spawnQueue.every(entry => entry.typeId === typeId)).toBe(true)
+      expect(nextSpawnEntry(42, 0, config).entry.typeId).toBe(typeId)
     })
   })
 

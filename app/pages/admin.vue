@@ -70,6 +70,7 @@
             <input id="config-name" v-model="configName" required placeholder="Daily challenge">
             <label for="config-rules">Rules JSON</label>
             <textarea id="config-rules" v-model="rulesJson" required rows="18" spellcheck="false" />
+            <small><code>startingPlayerMonsterCount</code> and <code>startingEnemyMonsterCount</code> control the initial roster; set the enemy count to 0 for no starting enemies. Starting positions and types are selected deterministically from the run seed. Use <code>playerMonsterTypes</code> to control player monster types.</small>
             <p v-if="publishError" class="admin-error" role="alert">{{ publishError }}</p>
             <p v-if="published" role="status">{{ published }}</p>
             <div class="admin-actions">
@@ -81,6 +82,7 @@
           <ul v-if="dashboard">
             <li v-for="config in dashboard.configs" :key="config.id" class="admin-config">
               <span>{{ config.name }} <code>{{ config.id }}</code>{{ config.archived ? ' (archived)' : '' }}</span>
+              <button type="button" :disabled="publishing" @click="duplicateConfig(config.id)">Duplicate</button>
               <button type="button" :disabled="!!archivingId" @click="setArchived(config.id, !config.archived)">
                 {{ config.archived ? 'Restore' : 'Archive' }}
               </button>
@@ -102,13 +104,14 @@ import { getFunctions, httpsCallable } from 'firebase/functions'
 import type { Functions } from 'firebase/functions'
 import { DEFAULT_GAME_CONFIG } from '~~/game/config'
 import { parseAvailableConfig } from '~~/game/configValidation'
+import type { GameConfig } from '~~/game/configValidation'
 
 interface Dashboard {
   playerCount: number
   gameCount: number
   games: { path: string, username: string, startTime: number, status: string, turn: number | string, highScore: number | string }[]
   players: { id: string, username: string }[]
-  configs: { id: string, name: string, archived: boolean }[]
+  configs: { id: string, name: string, archived: boolean, rules: GameConfig }[]
 }
 
 const runtime = useRuntimeConfig().public
@@ -266,7 +269,7 @@ async function loadDashboard() {
       })),
       configs: configs.docs.map((entry) => {
         const config = parseAvailableConfig(entry.id, entry.data())
-        return { id: config.id, name: config.name, archived: config.archived === true }
+        return { id: config.id, name: config.name, archived: config.archived === true, rules: config.rules }
       }).sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
     }
   } catch (cause) {
@@ -283,6 +286,40 @@ function formatDate(time: number) {
 function resetRules() {
   rulesJson.value = JSON.stringify(DEFAULT_GAME_CONFIG, null, 2)
   publishError.value = ''
+}
+
+function getDuplicateConfigId(id: string): string {
+  const existingIds = new Set(dashboard.value?.configs.map(config => config.id))
+  const safeId = id.replace(/[^a-zA-Z0-9_-]/g, '-')
+  let suffix = '-copy'
+  let copyId = `${safeId.slice(0, 1500 - suffix.length)}${suffix}`
+  let index = 2
+
+  while (existingIds.has(copyId)) {
+    suffix = `-copy-${index++}`
+    copyId = `${safeId.slice(0, 1500 - suffix.length)}${suffix}`
+  }
+
+  return copyId
+}
+
+function duplicateConfig(id: string) {
+  const config = dashboard.value?.configs.find(entry => entry.id === id)
+  if (!config) {
+    showPublishError(`Could not find configuration ${id}. Refresh the dashboard and try again.`)
+    return
+  }
+
+  configId.value = getDuplicateConfigId(config.id)
+  configName.value = `${config.name} copy`
+  rulesJson.value = JSON.stringify(config.rules, null, 2)
+  publishError.value = ''
+  published.value = ''
+  toast.add({
+    title: 'Configuration copied to editor',
+    description: `Edit the copy of ${config.name} and publish it with a new ID.`,
+    color: 'success'
+  })
 }
 
 function handleInvalid(event: Event) {

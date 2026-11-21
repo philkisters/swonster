@@ -4,30 +4,48 @@ import { createInitialState } from '../game/initialState'
 import { chooseRunSeed } from '../game/rng'
 
 describe('createInitialState', () => {
-  it('creates a 4×4 board with the specified friendly and enemy monsters', () => {
+  it('creates a 4×4 board with the configured starting monster counts', () => {
     const state = createInitialState()
+    const startingMonsters = state.cells.filter((monster): monster is NonNullable<typeof monster> => monster !== null)
 
     expect(state).toMatchObject({ width: 4, height: 4, turn: 0 })
     expect(state.cells).toHaveLength(16)
-    expect(state.cells.flatMap((monster, index) => {
-      if (!monster) return []
-
-      return [{
-        index,
-        faction: monster.faction,
-        typeId: monster.typeId
-      }]
-    })).toEqual([
-      { index: 3, faction: 'enemy', typeId: 'skeletDragon' },
-      { index: 4, faction: 'player', typeId: 'dragon' },
-      { index: 5, faction: 'enemy', typeId: 'skeletDragon' },
-      { index: 6, faction: 'enemy', typeId: 'skeletDragon' },
-      { index: 7, faction: 'enemy', typeId: 'skeletDragon' },
-      { index: 8, faction: 'enemy', typeId: 'skeletDragon' },
-      { index: 12, faction: 'player', typeId: 'griffin' },
-      { index: 14, faction: 'player', typeId: 'griffin' }
-    ])
+    expect(startingMonsters).toHaveLength(2)
+    expect(startingMonsters.filter(monster => monster.faction === 'player')).toHaveLength(1)
+    expect(startingMonsters.filter(monster => monster.faction === 'enemy')).toHaveLength(1)
     expect(state.spawnQueue).toHaveLength(10)
+  })
+
+  it('places configured starting monsters deterministically from the run seed', () => {
+    const config = {
+      ...DEFAULT_GAME_CONFIG,
+      startingPlayerMonsterCount: 3,
+      startingEnemyMonsterCount: 5,
+      playerMonsterTypes: ['griffin']
+    }
+    const first = createInitialState(42, config)
+    const repeated = createInitialState(42, config)
+    const otherSeed = createInitialState(43, config)
+    const startingMonsters = first.cells.flatMap((monster, index) => monster ? [{ ...monster, index }] : [])
+
+    expect(first.cells).toEqual(repeated.cells)
+    expect(first.cells).not.toEqual(otherSeed.cells)
+    expect(startingMonsters).toHaveLength(8)
+    expect(startingMonsters.filter(monster => monster.faction === 'player')).toHaveLength(3)
+    expect(startingMonsters.filter(monster => monster.faction === 'enemy')).toHaveLength(5)
+    expect(startingMonsters.filter(monster => monster.faction === 'player').every(monster => monster.typeId === 'griffin')).toBe(true)
+    expect(new Set(startingMonsters.map(monster => monster.index)).size).toBe(8)
+  })
+
+  it.each([[3, 4], [4, 3]] as const)('supports rectangular %i×%i boards', (boardWidth, boardHeight) => {
+    const state = createInitialState(42, {
+      ...DEFAULT_GAME_CONFIG,
+      boardWidth,
+      boardHeight
+    })
+
+    expect(state).toMatchObject({ width: boardWidth, height: boardHeight })
+    expect(state.cells).toHaveLength(boardWidth * boardHeight)
   })
 
   it('creates the same spawn preview and seed for the same run seed', () => {

@@ -70,7 +70,7 @@ describe('admin config publishing', () => {
   it('validates input on the server before creating a document', async () => {
     await expect(handler({ auth: admin, data: { ...valid, id: '__legacy__' } }))
       .rejects.toMatchObject({ code: 'invalid-argument' })
-    await expect(handler({ auth: admin, data: { ...valid, rules: { ...valid.rules, boardWidth: 3 } } }))
+    await expect(handler({ auth: admin, data: { ...valid, rules: { ...valid.rules, boardWidth: 2 } } }))
       .rejects.toMatchObject({ code: 'invalid-argument', message: expect.stringContaining('rules.boardWidth') })
     expect(mocks.create).not.toHaveBeenCalled()
   })

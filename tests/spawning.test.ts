@@ -68,7 +68,13 @@ describe('deterministic spawn timeline', () => {
 
   it('chooses a seeded random free tile rather than always using the first tile', () => {
     const getSpawnIndex = (seed: number) => {
-      const result = executeTurn(createInitialState(seed), 'left')
+      const state = createInitialState(seed)
+      const result = (['left', 'right', 'up', 'down'] as const)
+        .map(direction => executeTurn(state, direction))
+        .find(turn => turn.valid)
+      if (!result) {
+        throw new Error('Expected a valid move from the initial state')
+      }
       const spawnEvent = result.events.find(event => event.type === 'spawn')
       if (spawnEvent?.type !== 'spawn') {
         throw new Error('Expected a spawn event after a valid turn')

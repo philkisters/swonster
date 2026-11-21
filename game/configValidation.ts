@@ -23,10 +23,12 @@ const monsterTypesSchema = z.record(z.string(), monsterTypeSchema).superRefine((
 
 export const gameConfigSchema = z.looseObject({
   maxMonsterSpriteLevel: z.number().int().min(1).max(10),
-  boardWidth: z.number().int().min(4).max(8),
-  boardHeight: z.number().int().min(4).max(8),
+  boardWidth: z.number().int().min(3).max(8),
+  boardHeight: z.number().int().min(3).max(8),
   spawnQueueLength: z.number().int().min(1).max(100),
   spawnTier: z.number().int().min(1).max(10),
+  startingPlayerMonsterCount: z.number().int().min(1).max(64).default(1),
+  startingEnemyMonsterCount: z.number().int().min(0).max(64).default(1),
   friendSpawnChance: z.number().min(0).max(1),
   rngSeed: z.number().int().min(0).max(0xffffffff).nullable(),
   enemyTierProgression: z.array(z.looseObject({
@@ -48,7 +50,27 @@ export const gameConfigSchema = z.looseObject({
   enemyTierUnlockPlayerTier: z.number().int().min(1).max(100),
   spellSlotCount: z.number().int().min(1).max(11),
   spellRefillInterval: z.number().int().min(1).max(10000),
-  monsterTypes: monsterTypesSchema
+  monsterTypes: monsterTypesSchema,
+  playerMonsterTypes: z.array(z.string().min(1)).min(1).readonly().default(['dragon', 'griffin'])
+}).superRefine((config, ctx) => {
+  if (config.startingPlayerMonsterCount + config.startingEnemyMonsterCount > config.boardWidth * config.boardHeight) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['startingEnemyMonsterCount'],
+      message: 'Starting monsters must fit on the board'
+    })
+  }
+
+  const seen = new Set<string>()
+  for (const [index, typeId] of config.playerMonsterTypes.entries()) {
+    if (seen.has(typeId)) {
+      ctx.addIssue({ code: 'custom', path: ['playerMonsterTypes', index], message: 'Player monster types must be unique' })
+    }
+    if (config.monsterTypes[typeId]?.faction !== 'player') {
+      ctx.addIssue({ code: 'custom', path: ['playerMonsterTypes', index], message: 'Must reference a configured player monster type' })
+    }
+    seen.add(typeId)
+  }
 })
 
 const availableConfigSchema = z.looseObject({
@@ -68,7 +90,10 @@ export interface AvailableConfig {
 }
 
 export function isGameConfig(value: unknown): value is GameConfig {
-  return gameConfigSchema.safeParse(value).success
+  return typeof value === 'object'
+    && value !== null
+    && 'playerMonsterTypes' in value
+    && gameConfigSchema.safeParse(value).success
 }
 
 export function parseAvailableConfig(id: string, value: unknown): AvailableConfig {
