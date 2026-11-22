@@ -19,8 +19,7 @@ const monsterSchema = z.object({
   isBoss: z.boolean().optional(),
 })
 
-export const gameStateSchema = z.object({
-  config: gameConfigSchema,
+export const persistedGameStateSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   cells: z.array(monsterSchema.nullable()),
@@ -35,6 +34,10 @@ export const gameStateSchema = z.object({
   spellRngSeed: z.number().int(),
   gameOver: z.boolean(),
   gameOverReason: z.enum(['board-full', 'no-friendly-monsters']).optional(),
+})
+
+export const gameStateSchema = persistedGameStateSchema.extend({
+  config: gameConfigSchema
 }).refine(state =>
   state.cells.length === state.width * state.height
   && state.width === state.config.boardWidth
