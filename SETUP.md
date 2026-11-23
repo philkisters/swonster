@@ -23,16 +23,18 @@ Authentication, and create a Cloud Firestore database. Copy `.env.example` to
 `firestore.rules` using the Firestore console or Firebase CLI before playing.
 
 Each player can access only their own profile and games. Each game stores its
-start time, end time, current turn, score, highest score, and actual initial
-seed, the latest game state, and valid moves and spells in order in its `steps`
-subcollection. Times come from the player's device. Returning to the menu keeps
-an unfinished game available through **Resume Game**; starting a new game marks
-previous active games as aborted. Games saved before state snapshots were
-introduced cannot be resumed. Pending writes may be lost if the page closes
-unexpectedly. Concurrent sessions cannot overwrite a newer saved state: if a
-save fails, return to the menu and resume the last saved state. These client-reported
-scores and actions are not cheat-proof and must not be used as a trusted
-leaderboard. Firestore usage incurs reads and writes for each recorded action.
+start time, end time, current turn, score, highest score, actual initial seed,
+config ID, the latest game state, and valid moves and spells in order in its
+`steps` subcollection. The configuration rules are loaded from the referenced
+config document and are not duplicated in the saved state. Times come from the
+player's device. Returning to the menu keeps an unfinished game available
+through **Resume Game**; starting a new game marks previous active games as
+aborted. Games saved before state snapshots were introduced cannot be resumed.
+Pending writes may be lost if the page closes unexpectedly. Concurrent sessions
+cannot overwrite a newer saved state: if a save fails, return to the menu and
+resume the last saved state. These client-reported scores and actions are not
+cheat-proof and must not be used as a trusted leaderboard. Firestore usage
+incurs reads and writes for each recorded action.
 
 ### Game configurations
 
@@ -113,10 +115,12 @@ without a trailing version such as `-v1`. Configurations without a matching
 image use a cog and their name. The `default-2-types` mode is selected by
 default when available.
 Admins can archive or restore configurations on `/admin`. Archived configs are
-hidden from the new-game menu and score history. Games
-already in progress can finish; starting or restarting a saved game checks the
-latest archive status. Older clients may still offer archived configs, so this
-is a selection control rather than a security restriction.
+hidden from the new-game menu and score history. Resuming a game loads the
+latest archive status: an archived config shows a warning and allows the player
+to continue, while its results remain outside score lists. Missing config
+documents prevent resume and return the player to the menu. Older clients may
+still offer archived configs, so this is a selection control rather than a
+security restriction.
 
 ### Admin page
 

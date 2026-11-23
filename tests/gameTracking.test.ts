@@ -52,6 +52,7 @@ vi.mock('firebase/firestore', () => ({
   where: (...values: unknown[]) => ({ type: 'where', values }),
   orderBy: (...values: unknown[]) => ({ type: 'orderBy', values }),
   limit: (value: number) => ({ type: 'limit', value }),
+  deleteField: () => ({ type: 'deleteField' }),
   runTransaction: async (_database: unknown, callback: (transaction: unknown) => Promise<void>) => {
     const writes: Array<() => void> = []
     const snapshot = (ref: { path: string }) => ({
@@ -110,12 +111,13 @@ beforeEach(() => {
   }))
   firebase.commit.mockResolvedValue(undefined)
   firebase.getDocs.mockResolvedValue({ docs: [] })
+  firebase.documents.set('configs/daily-1', { name: 'Daily', rules: DEFAULT_GAME_CONFIG })
 })
 
 describe('game tracking', () => {
   const config = { id: 'daily-1', name: 'Daily', rules: DEFAULT_GAME_CONFIG }
   const history = [{ kind: 'friend' as const, typeId: 'dragon', tier: 1 }]
-  it('loads published configurations and snapshots the selected rules with each game', async () => {
+  it('loads published configurations and stores only the selected config ID with each game', async () => {
     const tracking = useGameTracking()
     await tracking.connect()
     firebase.getDocs.mockResolvedValueOnce({
@@ -132,9 +134,13 @@ describe('game tracking', () => {
     expect(firebase.batchSet).toHaveBeenLastCalledWith(
       expect.objectContaining({ path: 'players/abcde12345/games/new-game' }),
       expect.objectContaining({
-        configId: 'daily-1', configName: 'Daily', config: DEFAULT_GAME_CONFIG, initialSeed: 42
+        configId: 'daily-1', initialSeed: 42
       }),
     )
+    const storedGame = firebase.batchSet.mock.calls.at(-1)?.[1]
+    expect(storedGame).not.toHaveProperty('config')
+    expect(storedGame).not.toHaveProperty('configName')
+    expect(storedGame?.state).not.toHaveProperty('config')
   })
 
   it('filters archived configurations by default but allows explicitly listing them', async () => {
@@ -244,7 +250,7 @@ describe('game tracking', () => {
     await tracking.connect()
     await tracking.begin(42, config, createInitialState(42), history)
     await expect(tracking.loadActiveGame()).resolves.toMatchObject({
-      state: createInitialState(42), history,
+      state: createInitialState(42), history, usesArchivedConfig: false,
     })
     const state = { ...createInitialState(42), turn: 3, score: 15 }
     tracking.record({ type: 'move', direction: 'up' }, state, history)
@@ -258,6 +264,31 @@ describe('game tracking', () => {
     resumed.record({ type: 'move', direction: 'left' }, { ...state, turn: 4 }, history)
     await resumed.end()
     expect(firebase.documents.has('players/abcde12345/games/new-game/steps/0000000002')).toBe(true)
+  })
+
+  it('loads the latest archived config for an existing game', async () => {
+    const tracking = useGameTracking()
+    await tracking.connect()
+    await tracking.begin(42, config, createInitialState(42), history)
+    firebase.documents.set('configs/daily-1', {
+      name: 'Daily',
+      rules: DEFAULT_GAME_CONFIG,
+      archived: true,
+    })
+
+    await expect(tracking.loadActiveGame()).resolves.toMatchObject({
+      config: { id: 'daily-1', archived: true },
+      usesArchivedConfig: true,
+    })
+  })
+
+  it('rejects resume when the referenced config is missing', async () => {
+    const tracking = useGameTracking()
+    await tracking.connect()
+    await tracking.begin(42, config, createInitialState(42), history)
+    firebase.documents.delete('configs/daily-1')
+
+    await expect(tracking.loadActiveGame()).rejects.toThrow('configuration could not be found')
   })
 
   it('aborts all previous active games, including legacy games, when starting a new one', async () => {

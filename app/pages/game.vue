@@ -10,7 +10,24 @@
     <p v-if="trackingError" class="game-tracking-error" role="alert">{{ trackingError }}</p>
     <p v-if="configError" class="game-tracking-error" role="alert">{{ configError }}</p>
     <button v-if="configError" type="button" @click="router.push('/')">Go to Main Menu</button>
-    <MenuLoading v-if="!gameReady && !configError" text="Loading game configuration..." :size="8" />
+    <MenuLoading v-if="!gameReady && !configError && !archivedResume" text="Loading game configuration..." :size="8" />
+
+    <section
+      v-if="archivedResume"
+      class="game-config-warning"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="archived-config-title"
+    >
+      <h2 id="archived-config-title">Out-of-date configuration</h2>
+      <p>
+        The resumed game uses an out-of-date configuration. You can continue playing, but the results will not be visible in the highscore list.
+      </p>
+      <div class="game-config-warning-actions">
+        <button type="button" @click="returnToMenu">Return to menu</button>
+        <button type="button" @click="continueArchivedGame">Continue anyway</button>
+      </div>
+    </section>
 
     <section
       v-if="gameReady"
@@ -107,13 +124,15 @@
 </template>
 
 <script setup lang="ts">
-import type { Direction } from '../../game/types'
+import type { Direction, GameState, SpawnEntry } from '../../game/types'
 import type { AvailableConfig } from '../../game/configValidation'
-import { ArchivedConfigError } from '~/composables/useGameTracking'
+import { ArchivedConfigError, MissingConfigError } from '~/composables/useGameTracking'
 
 const showTutorial = ref(true)
 const gameReady = ref(false)
 const configError = ref('')
+const archivedResume = ref(false)
+let pendingResume: { state: GameState, history: SpawnEntry[] } | undefined
 let selectedConfig: AvailableConfig | undefined
 const {
   error: trackingError,
@@ -186,6 +205,15 @@ async function returnToMenu() {
   await router.push('/')
 }
 
+function continueArchivedGame() {
+  if (!pendingResume) return
+  restore(pendingResume.state, pendingResume.history)
+  pendingResume = undefined
+  archivedResume.value = false
+  showTutorial.value = false
+  gameReady.value = true
+}
+
 onMounted(async () => {
   try {
     if (route.query.offline === '1') {
@@ -198,6 +226,11 @@ onMounted(async () => {
       const saved = await loadActiveGame()
       if (!saved) throw new Error('No active game is available.')
       selectedConfig = saved.config
+      if (saved.usesArchivedConfig) {
+        pendingResume = { state: saved.state, history: saved.history }
+        archivedResume.value = true
+        return
+      }
       restore(saved.state, saved.history)
       showTutorial.value = false
       gameReady.value = true
@@ -214,7 +247,9 @@ onMounted(async () => {
     console.error('Could not start the game.', cause)
     configError.value = cause instanceof ArchivedConfigError
       ? cause.message
-      : 'Could not load the configuration or start the game. Return to the menu and try again.'
+      : cause instanceof MissingConfigError
+        ? cause.message
+        : 'Could not load the configuration or start the game. Return to the menu and try again.'
   }
 })
 const router = useRouter()
@@ -226,6 +261,29 @@ useGameInput(moveWhenReady, cancelSpell)
 .game-tracking-error {
   margin: 0;
   color: var(--game-damage-text);
+}
+
+.game-config-warning {
+  display: grid;
+  gap: 1rem;
+  width: min(100% - 2rem, 32rem);
+  margin: 10vh auto 0;
+  padding: 1.5rem;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-bg-elevated);
+}
+
+.game-config-warning h2,
+.game-config-warning p {
+  margin: 0;
+}
+
+.game-config-warning-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .game-board-column {

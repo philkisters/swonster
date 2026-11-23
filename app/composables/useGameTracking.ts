@@ -3,6 +3,7 @@ import { getAuth, signInAnonymously } from 'firebase/auth'
 import {
   collection,
   collectionGroup,
+  deleteField,
   doc,
   getDoc,
   getDocFromServer,
@@ -19,7 +20,7 @@ import {
 } from 'firebase/firestore'
 import type { DocumentReference, Firestore } from 'firebase/firestore'
 import type { GameState, SpawnEntry } from '~~/game/types'
-import { gameStateSchema, spawnHistorySchema } from '../../game/stateValidation'
+import { gameStateSchema, persistedGameStateSchema, spawnHistorySchema } from '../../game/stateValidation'
 import { parseAvailableConfig } from '../../game/configValidation'
 import type { AvailableConfig } from '../../game/configValidation'
 import type { GameAction } from './useGame'
@@ -30,6 +31,13 @@ export class ArchivedConfigError extends Error {
   constructor() {
     super('This configuration is archived. Return to the menu and choose another.')
     this.name = 'ArchivedConfigError'
+  }
+}
+
+export class MissingConfigError extends Error {
+  constructor(id: string) {
+    super(`The saved game's configuration could not be found: ${id}. Return to the main menu.`)
+    this.name = 'MissingConfigError'
   }
 }
 
@@ -54,6 +62,7 @@ export interface SavedGame {
   state: GameState
   history: SpawnEntry[]
   config: AvailableConfig
+  usesArchivedConfig: boolean
 }
 
 export function useGameTracking() {
@@ -166,12 +175,12 @@ export function useGameTracking() {
       .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
   }
 
-  async function loadConfig(id: string): Promise<AvailableConfig> {
+  async function loadConfig(id: string, includeArchived = false): Promise<AvailableConfig> {
     if (!database || !ready.value) throw new Error('Connect to Firebase before loading a configuration.')
     const snapshot = await getDocFromServer(doc(database, 'configs', id))
-    if (!snapshot.exists()) throw new Error(`Game configuration not found: ${id}`)
+    if (!snapshot.exists()) throw new MissingConfigError(id)
     const config = parseAvailableConfig(id, snapshot.data())
-    if (config.archived) throw new ArchivedConfigError()
+    if (config.archived && !includeArchived) throw new ArchivedConfigError()
     return config
   }
 
@@ -243,18 +252,23 @@ export function useGameTracking() {
     if (!snapshot.exists()) throw new Error('The active game could not be found.')
     const data = snapshot.data()
     if (data.status !== 'active') throw new Error('The active game is no longer available.')
-    const state = gameStateSchema.parse(data.state)
+    if (typeof data.configId !== 'string' || !data.configId) {
+      throw new Error('The saved game has no configuration reference.')
+    }
+    const config = await loadConfig(data.configId, true)
+    const persistedState = persistedGameStateSchema.parse(data.state)
+    const state = gameStateSchema.parse({ ...persistedState, config: config.rules })
     const history = spawnHistorySchema.parse(data.spawnHistory)
     if (state.gameOver || !Number.isSafeInteger(data.step) || data.step < 0
-      || typeof data.highScore !== 'number' || !Number.isFinite(data.highScore)
-      || typeof data.configId !== 'string' || typeof data.configName !== 'string') {
+      || typeof data.highScore !== 'number' || !Number.isFinite(data.highScore)) {
       throw new Error('The saved game is invalid.')
     }
     session = { reference, step: data.step, highScore: data.highScore, ended: false }
     return {
       state,
       history,
-      config: { id: data.configId, name: data.configName, rules: state.config },
+      config,
+      usesArchivedConfig: config.archived === true,
     }
   }
 
@@ -265,7 +279,7 @@ export function useGameTracking() {
     const player = doc(firestore, 'players', playerId)
     const games = collection(firestore, 'players', playerId, 'games')
     const reference = doc(games)
-    const savedState = gameStateSchema.parse(state)
+    const savedState = persistedGameStateSchema.parse(state)
     const savedHistory = spawnHistorySchema.parse(history.slice(-7))
     const activeGames = await getDocsFromServer(query(games, where('status', '==', 'active')))
     await runTransaction(firestore, async (transaction) => {
@@ -295,8 +309,6 @@ export function useGameTracking() {
         status: 'active',
         initialSeed,
         configId: config.id,
-        configName: config.name,
-        config: config.rules,
         state: savedState,
         spawnHistory: savedHistory,
         step: 0,
@@ -311,7 +323,7 @@ export function useGameTracking() {
     const firestore = database
     const current = session
     const player = doc(firestore, 'players', playerId)
-    const savedState = gameStateSchema.parse(state)
+    const savedState = persistedGameStateSchema.parse(state)
     const savedHistory = spawnHistorySchema.parse(history.slice(-7))
     const savedAction: GameAction = action.type === 'move'
       ? { ...action }
@@ -347,6 +359,8 @@ export function useGameTracking() {
           step: sequence,
           state: savedState,
           spawnHistory: savedHistory,
+          config: deleteField(),
+          configName: deleteField(),
           ...(savedState.gameOver ? { endTime: Date.now(), status: 'game-over' } : {}),
         })
         if (savedState.gameOver) transaction.update(player, { activeGameId: null })
