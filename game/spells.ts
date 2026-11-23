@@ -207,8 +207,9 @@ export function castSpell(state: GameState, slot: number, targets: Target[]): Sp
     gold: state.gold - cost,
     spellSlots: state.spellSlots.with(slot, null)
   }, ...targets)
-  const reachedUnlockTier = next.cells.some(monster =>
-    monster?.faction === 'player' && monster.tier >= (state.config ?? DEFAULT_GAME_CONFIG).enemyTierUnlockPlayerTier
+  const unlockTier = config.enemySpawnCurve ? undefined : config.enemyTierUnlockPlayerTier
+  const reachedUnlockTier = typeof unlockTier === 'number' && next.cells.some(monster =>
+    monster?.faction === 'player' && monster.tier >= unlockTier
   )
 
   return {

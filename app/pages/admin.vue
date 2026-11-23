@@ -63,6 +63,7 @@
           <h2>Publish configuration</h2>
           <p>Published rules cannot be changed. Use a new ID for every rules change.</p>
           <form class="admin-form" @submit.prevent="publish" @invalid.capture="handleInvalid" @input="publishError = ''">
+            <AdminSpawnBalancer v-model="rulesJson" />
             <label for="config-id">Config ID</label>
             <input id="config-id" v-model="configId" required pattern="[a-zA-Z0-9_\-]+" maxlength="1500" placeholder="daily-2026-01-01" aria-describedby="config-id-help">
             <small id="config-id-help">Use letters, numbers, underscores, or hyphens; no spaces.</small>

@@ -24,7 +24,8 @@ export function executeTurn(state: GameState, direction: Direction): TurnResult 
 
   const rewards = combat.enemyDefeats
   const unlockedEnemyTiers = movement.events.some(event =>
-    event.type === 'merge'
+    !config.enemySpawnCurve
+    && event.type === 'merge'
     && movement.cells[event.at]?.faction === 'player'
     && movement.cells[event.at]?.tier === config.enemyTierUnlockPlayerTier
   )

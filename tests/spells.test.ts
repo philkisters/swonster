@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_GAME_CONFIG, getMonsterStats, SPELL_REFILL_INTERVAL, SPELL_SLOT_COUNT } from '../game/config'
+import { DEFAULT_GAME_CONFIG, ENEMY_TIER_PROGRESSION, ENEMY_TIER_UNLOCK_PLAYER_TIER, getMonsterStats, SPELL_REFILL_INTERVAL, SPELL_SLOT_COUNT } from '../game/config'
 import { executeTurn } from '../game/engine'
 import { createInitialState } from '../game/initialState'
 import { createSpawnQueue } from '../game/spawning'
@@ -243,13 +243,22 @@ describe('spell effects', () => {
   })
 
   it('evolve raises the level at full health and unlocks enemy tiers at level 3', () => {
-    const state = createState('evolve', [[0, createMonster('ally', 'player', { tier: 2, hp: 1, maxHp: 20, atk: 4 })]])
+    const { enemySpawnCurve: _curve, ...legacyRules } = DEFAULT_GAME_CONFIG
+    const state = {
+      ...createState('evolve', [[0, createMonster('ally', 'player', { tier: 2, hp: 1, maxHp: 20, atk: 4 })]]),
+      config: { ...legacyRules, enemyTierProgression: ENEMY_TIER_PROGRESSION, enemyTierUnlockPlayerTier: ENEMY_TIER_UNLOCK_PLAYER_TIER }
+    }
 
     const result = castSpell(state, 0, [cell(0)]).state
 
     expect(result.cells[0]).toMatchObject({ id: 'ally', tier: 3, ...getMonsterStats('dragon', 3) })
     expect(result.cells[0]?.hp).toBe(getMonsterStats('dragon', 3).maxHp)
     expect(result.enemyTierUnlockTurn).toBe(4)
+  })
+
+  it('does not track a legacy unlock for curve-based rules', () => {
+    const state = createState('evolve', [[0, createMonster('ally', 'player', { tier: 2, hp: 1, maxHp: 20, atk: 4 })]])
+    expect(castSpell(state, 0, [cell(0)]).state.enemyTierUnlockTurn).toBeNull()
   })
 })
 

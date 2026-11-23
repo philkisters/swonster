@@ -37,6 +37,12 @@ export const gameConfigSchema = z.looseObject({
   startingEnemyMonsterCount: z.number().int().min(0).max(64).default(1),
   friendSpawnChance: z.number().min(0).max(1),
   rngSeed: z.number().int().min(0).max(0xffffffff).nullable(),
+  enemySpawnCurve: z.object({
+    difficultyBuffer: z.number().min(0).max(1),
+    maxActiveTiers: z.number().int().min(2).max(12),
+    peakPosition: z.number().gt(0).lt(1),
+    maxTier: z.number().int().min(1).max(12)
+  }).optional(),
   enemyTierProgression: z.array(z.looseObject({
     tier: z.number().int().min(1).max(10),
     chancePerTurn: z.number().min(0).max(1),
@@ -44,7 +50,7 @@ export const gameConfigSchema = z.looseObject({
   })).readonly().refine(
     entries => entries.reduce((sum, entry) => sum + entry.maxChance, 0) <= 1,
     'Total maximum enemy tier chance must not exceed 1'
-  ),
+  ).nullish(),
   enemyDefeatReward: z.looseObject({
     score: z.number().min(0).max(100000),
     gold: z.number().min(0).max(100000),
@@ -53,7 +59,7 @@ export const gameConfigSchema = z.looseObject({
   enemyDefeatScoreMultiplier: z.number().min(1).max(10),
   friendlyMergeScore: z.number().min(0).max(100000),
   friendlyMergeScoreMultiplier: z.number().min(1).max(10),
-  enemyTierUnlockPlayerTier: z.number().int().min(1).max(100),
+  enemyTierUnlockPlayerTier: z.number().int().min(1).max(100).nullish(),
   spellSlotCount: z.number().int().min(1).max(11),
   spellRefillInterval: z.number().int().min(1).max(10000),
   availableSpells: z.array(spellIdSchema).readonly().default(() => [...SPELL_IDS]),
@@ -61,6 +67,15 @@ export const gameConfigSchema = z.looseObject({
   monsterTypes: monsterTypesSchema,
   playerMonsterTypes: z.array(z.string().min(1)).min(1).readonly().default(['dragon', 'griffin'])
 }).superRefine((config, ctx) => {
+  if (!config.enemySpawnCurve) {
+    if (!config.enemyTierProgression) {
+      ctx.addIssue({ code: 'custom', path: ['enemyTierProgression'], message: 'Required without an enemy spawn curve' })
+    }
+    if (config.enemyTierUnlockPlayerTier === undefined || config.enemyTierUnlockPlayerTier === null) {
+      ctx.addIssue({ code: 'custom', path: ['enemyTierUnlockPlayerTier'], message: 'Required without an enemy spawn curve' })
+    }
+  }
+
   if (config.startingPlayerMonsterCount + config.startingEnemyMonsterCount > config.boardWidth * config.boardHeight) {
     ctx.addIssue({
       code: 'custom',

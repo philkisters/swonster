@@ -12,7 +12,7 @@ export default withNuxt(
         order: ['template', 'script', 'style']
       }],
       'better-tailwindcss/no-unknown-classes': ['error', {
-        ignore: ['^(admin-|game-|board-|monster-|spawn-|spell-|empty-mark$|eyebrow$|turn-|play-area$|control-|swipe-hint$|legend-dot|merge-note$)']
+        ignore: ['^(admin-|game-|board-|monster-|spawn-|spell-|empty-mark$|eyebrow$|turn-|play-area$|control-|swipe-hint$|legend-dot|merge-note$|balancer$|controls$|panel$|section-title$|chart$|gridline$|axis$|legend$|stack$|probabilities$|unlock-grid$|hint$)']
       }]
     },
     settings: {

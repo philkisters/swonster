@@ -82,4 +82,11 @@ describe('admin config publishing', () => {
     mocks.create.mockRejectedValueOnce({ code: 6 })
     await expect(handler({ auth: admin, data: valid })).rejects.toMatchObject({ code: 'already-exists' })
   })
+
+  it('publishes curve-based rules with omitted or null legacy spawn settings', async () => {
+    await expect(handler({ auth: admin, data: valid })).resolves.toEqual({ id: 'daily-1' })
+    const rules = { ...valid.rules, enemyTierProgression: null, enemyTierUnlockPlayerTier: null }
+    await expect(handler({ auth: admin, data: { ...valid, rules } })).resolves.toEqual({ id: 'daily-1' })
+    expect(mocks.create).toHaveBeenLastCalledWith({ name: 'Daily', rules })
+  })
 })

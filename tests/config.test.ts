@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_GAME_CONFIG, getMonsterHeadSprite, getMonsterSprite } from '../game/config'
+import { DEFAULT_GAME_CONFIG, ENEMY_TIER_PROGRESSION, ENEMY_TIER_UNLOCK_PLAYER_TIER, getMonsterHeadSprite, getMonsterSprite } from '../game/config'
 import { isGameConfig, parseAvailableConfig } from '../game/configValidation'
 import { createInitialState } from '../game/initialState'
 import { slideAndMerge } from '../game/movement'
@@ -93,6 +93,42 @@ describe('monster sprites', () => {
       expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, spellCostModifier: 0 })).toBe(true)
       expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, spellCostModifier: -1 })).toBe(false)
       expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, spellCostModifier: Infinity })).toBe(false)
+    })
+
+    it('validates spawn curves and preserves legacy configurations without a curve', () => {
+      expect(DEFAULT_GAME_CONFIG).not.toHaveProperty('enemyTierProgression')
+      expect(DEFAULT_GAME_CONFIG).not.toHaveProperty('enemyTierUnlockPlayerTier')
+      expect(parseAvailableConfig('curve', { name: 'Curve', rules: DEFAULT_GAME_CONFIG }).rules).not.toHaveProperty('enemyTierProgression')
+      const { enemySpawnCurve: _curve, ...rulesWithoutCurve } = DEFAULT_GAME_CONFIG
+      expect(isGameConfig(rulesWithoutCurve)).toBe(false)
+      expect(isGameConfig({ ...rulesWithoutCurve, enemyTierProgression: ENEMY_TIER_PROGRESSION })).toBe(false)
+      expect(isGameConfig({ ...rulesWithoutCurve, enemyTierUnlockPlayerTier: ENEMY_TIER_UNLOCK_PLAYER_TIER })).toBe(false)
+      const legacyRules = {
+        ...rulesWithoutCurve,
+        enemyTierProgression: ENEMY_TIER_PROGRESSION,
+        enemyTierUnlockPlayerTier: ENEMY_TIER_UNLOCK_PLAYER_TIER
+      }
+      expect(parseAvailableConfig('legacy-spawn', { name: 'Legacy', rules: legacyRules }).rules.enemySpawnCurve).toBeUndefined()
+      const saved = gameStateSchema.parse(createInitialState(42, legacyRules))
+      expect(saved.config.enemySpawnCurve).toBeUndefined()
+      expect(nextSpawnEntry(saved.rngSeed, 100, saved.config)).toEqual(nextSpawnEntry(saved.rngSeed, 100, legacyRules))
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, enemySpawnCurve: { ...DEFAULT_GAME_CONFIG.enemySpawnCurve, maxActiveTiers: 1 } })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, enemySpawnCurve: { ...DEFAULT_GAME_CONFIG.enemySpawnCurve, peakPosition: 0 } })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, enemySpawnCurve: { ...DEFAULT_GAME_CONFIG.enemySpawnCurve, peakPosition: 1 } })).toBe(false)
+      expect(isGameConfig({ ...DEFAULT_GAME_CONFIG, enemySpawnCurve: { ...DEFAULT_GAME_CONFIG.enemySpawnCurve, maxTier: 13 } })).toBe(false)
+    })
+
+    it('allows null legacy spawn settings only when using a curve', () => {
+      const rules = { ...DEFAULT_GAME_CONFIG, enemyTierProgression: null, enemyTierUnlockPlayerTier: null }
+      const parsed = parseAvailableConfig('curve-null', { name: 'Curve', rules }).rules
+      expect(parsed).toMatchObject({ enemyTierProgression: null, enemyTierUnlockPlayerTier: null })
+      expect(isGameConfig(parsed)).toBe(true)
+      expect(nextSpawnEntry(42, 100, parsed, 100)).toEqual(nextSpawnEntry(42, 100, DEFAULT_GAME_CONFIG, 100))
+
+      const { enemySpawnCurve: _curve, ...legacyRules } = rules
+      expect(isGameConfig(legacyRules)).toBe(false)
+      expect(isGameConfig({ ...legacyRules, enemyTierProgression: ENEMY_TIER_PROGRESSION })).toBe(false)
+      expect(isGameConfig({ ...legacyRules, enemyTierUnlockPlayerTier: ENEMY_TIER_UNLOCK_PLAYER_TIER })).toBe(false)
     })
 
     it('rejects non-finite numbers and preserves additional fields in valid rules', () => {

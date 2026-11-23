@@ -76,6 +76,23 @@ makes spells free and 1 is the default.
 Older configurations without these fields retain the defaults. Sprite
 prefixes must correspond to deployed sprites.
 
+New standard rules use `enemySpawnCurve` to set `difficultyBuffer`,
+`maxActiveTiers`, `peakPosition`, and `maxTier` for the spawn balancer's
+per-turn enemy tier distribution. It uses `friendSpawnChance` as the friendly
+spawn rate; with no friendly spawns, enemies remain tier 1. The curve is
+evaluated for the turn each queued monster will spawn, independently of friendly
+merges. Friendly monsters still use `spawnTier`. At the end of the curve only
+the highest tier spawns. The default rules omit the legacy
+`enemyTierProgression` and `enemyTierUnlockPlayerTier` fields. Configurations
+without `enemySpawnCurve` must retain both fields; existing configurations and
+saved games continue to use their original unlock and progression rules. Publish
+a new configuration ID to use the curve. With a curve, these legacy fields may
+also be set to `null`.
+On `/admin`, the Spawn Balancer edits the friendly spawn chance and curve in the
+rules JSON directly; changes to the JSON, resetting the rules, and duplicating
+a configuration also update the chart. The editor offers an explicit option to
+replace a duplicated legacy configuration's progression with the curve.
+
 Use a **new ID for every rules change**: scores are grouped by configuration
 ID, and changing a published document would mix incomparable scores. Games
 also save a copy of their rules and the actual `initialSeed` used for the run.
@@ -128,6 +145,8 @@ To set it up:
    ```
 
    The deploy command bundles the shared config validation into the function.
+   Redeploy the functions after changing the shared validation schema; otherwise
+   the deployed publisher may reject rules accepted by the current admin page.
    The recent-games index may take time to finish building.
 3. Open `/admin` on the same origin and browser where you play. If your current
    player is anonymous, choose **Link this player to Google** to preserve its UID

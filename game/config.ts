@@ -1,6 +1,7 @@
 import type { Faction } from './types'
 import type { GameConfig, MonsterTypeDefinition } from './configValidation'
 import { SPELL_IDS } from './configValidation.ts'
+import { defaultSpawnConfig } from './spawn.ts'
 
 export type { GameConfig, MonsterTypeDefinition } from './configValidation'
 
@@ -72,12 +73,16 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   startingEnemyMonsterCount: 1,
   friendSpawnChance: FRIEND_SPAWN_CHANCE,
   rngSeed: null,
-  enemyTierProgression: ENEMY_TIER_PROGRESSION.map(entry => ({ ...entry })),
+  enemySpawnCurve: {
+    difficultyBuffer: defaultSpawnConfig.difficultyBuffer,
+    maxActiveTiers: defaultSpawnConfig.maxActiveTiers,
+    peakPosition: defaultSpawnConfig.peakPosition,
+    maxTier: defaultSpawnConfig.maxTier
+  },
   enemyDefeatReward: { ...ENEMY_DEFEAT_REWARD },
   enemyDefeatScoreMultiplier: ENEMY_DEFEAT_SCORE_MULTIPLIER,
   friendlyMergeScore: FRIENDLY_MERGE_SCORE,
   friendlyMergeScoreMultiplier: FRIENDLY_MERGE_SCORE_MULTIPLIER,
-  enemyTierUnlockPlayerTier: ENEMY_TIER_UNLOCK_PLAYER_TIER,
   spellSlotCount: SPELL_SLOT_COUNT,
   spellRefillInterval: SPELL_REFILL_INTERVAL,
   availableSpells: [...SPELL_IDS],

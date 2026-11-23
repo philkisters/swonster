@@ -7,9 +7,10 @@ import {
 } from './config'
 import type { GameConfig } from './config'
 import { nextSeed } from './rng'
+import { pickEnemyTier } from './spawn'
 import type { GameEvent, GameState, Monster, SpawnEntry, SpawnKind } from './types'
 
-export function nextSpawnEntry(seed: number, turnsSinceUnlock = 0, config: GameConfig = DEFAULT_GAME_CONFIG): { entry: SpawnEntry, rngSeed: number } {
+export function nextSpawnEntry(seed: number, turnsSinceUnlock = 0, config: GameConfig = DEFAULT_GAME_CONFIG, spawnTurn = 0): { entry: SpawnEntry, rngSeed: number } {
   let rngSeed = nextSeed(seed)
   const kind: SpawnKind = rngSeed / 0x100000000 < config.friendSpawnChance ? 'friend' : 'enemy'
   rngSeed = nextSeed(rngSeed)
@@ -22,7 +23,16 @@ export function nextSpawnEntry(seed: number, turnsSinceUnlock = 0, config: GameC
   }
 
   let tier: number = config.spawnTier
-  if (kind === 'enemy' && turnsSinceUnlock > 0) {
+  if (kind === 'enemy' && config.enemySpawnCurve) {
+    rngSeed = nextSeed(rngSeed)
+    tier = pickEnemyTier(spawnTurn, {
+      ...config.enemySpawnCurve,
+      friendlySpawnRate: config.friendSpawnChance
+    }, () => rngSeed / 0x100000000)
+  } else if (kind === 'enemy' && turnsSinceUnlock > 0) {
+    if (!config.enemyTierProgression) {
+      throw new Error('Enemy tier progression is required without an enemy spawn curve')
+    }
     rngSeed = nextSeed(rngSeed)
     const roll = rngSeed / 0x100000000
     let threshold = 0
@@ -53,7 +63,7 @@ export function createSpawnQueue(seed = DEFAULT_RNG_SEED, config: GameConfig = D
   let rngSeed = seed >>> 0
 
   for (let index = 0; index < config.spawnQueueLength; index++) {
-    const next = nextSpawnEntry(rngSeed, 0, config)
+    const next = nextSpawnEntry(rngSeed, 0, config, index + 1)
     spawnQueue.push(next.entry)
     rngSeed = next.rngSeed
   }
@@ -104,7 +114,7 @@ export function spawnNextMonster(state: GameState): {
   const turnsSinceUnlock = state.enemyTierUnlockTurn === null
     ? 0
     : state.turn - state.enemyTierUnlockTurn
-  const next = nextSpawnEntry(positionSeed, turnsSinceUnlock, state.config)
+  const next = nextSpawnEntry(positionSeed, turnsSinceUnlock, state.config, state.turn + state.spawnQueue.length)
 
   return {
     cells,
