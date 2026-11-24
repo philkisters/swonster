@@ -1,9 +1,6 @@
 <template>
   <header class="game-header">
-    <div class="flex items-center gap-4">
-      <UIcon name="i-lucide-chevron-left"  class="size-8 cursor-pointer hover:bg-primary rounded" @click="$emit('end-game')" />
-      <GameLogo />
-    </div>
+    <UIcon name="i-lucide-chevron-left" class="size-8 shrink-0 cursor-pointer hover:bg-primary rounded" @click="$emit('end-game')" />
     <div
       class="game-counters"
       role="group"
@@ -59,17 +56,18 @@ const counters = computed(() => [
 }
 
 .game-counters {
-  display: grid;
+  display: flex;
   min-width: 0;
-  grid-template-columns: auto auto auto;
-  gap: 0.2rem 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.2rem clamp(0.6rem, 3vw, 1.25rem);
 }
 
 .game-counter {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: subgrid;
+  display: flex;
   align-items: center;
+  gap: 0.35rem;
 }
 
 .game-counter-icon {
@@ -100,9 +98,19 @@ const counters = computed(() => [
 
 .game-counter-value {
   font-size: clamp(1.05rem, 4vw, 1.3rem);
-  justify-self: end;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   line-height: 1.2;
+}
+
+@media (max-width: 480px) {
+  .game-counter-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 </style>
