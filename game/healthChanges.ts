@@ -1,3 +1,4 @@
+import { isObstacle } from './obstacles'
 import type { Monster } from './types'
 
 export interface HealthChange {
@@ -11,13 +12,13 @@ type Cells = readonly (Readonly<Monster> | null)[]
  * Lists the HP each monster gained (positive) or lost (negative) between two boards.
  * A monster missing from the later board counts as defeated: it lost all its remaining HP
  * on the cell it stood on. Monsters whose maximum HP changed were transformed rather than
- * healed or hurt, and are left out.
+ * healed or hurt, and are left out, as are obstacles, which show their damage as cracks.
  */
 export function getHealthChanges(before: Cells, after: Cells): HealthChange[] {
   const cellById = new Map(after.flatMap((monster, cell) => monster ? [[monster.id, cell] as const] : []))
 
   return before.flatMap((monster, cell) => {
-    if (!monster) return []
+    if (!monster || isObstacle(monster)) return []
 
     const nextCell = cellById.get(monster.id)
     const next = nextCell === undefined ? null : after[nextCell]

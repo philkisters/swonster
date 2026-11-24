@@ -19,6 +19,7 @@
       :class="{
         'board-cell--player': monster?.faction === 'player',
         'board-cell--enemy': monster?.faction === 'enemy',
+        'board-cell--obstacle': monster?.faction === 'neutral',
         'board-cell--spawned': monster?.id === `spawn-${state.turn}`,
         'board-cell--merged': monster && mergedMonsterIds.has(monster.id),
         'board-cell--attacking': getAttackAnimation(monster) !== undefined,
@@ -34,14 +35,13 @@
       }"
       role="gridcell"
       :tabindex="targetableCells.has(index) ? 0 : undefined"
-      :aria-label="monster
-        ? `${getMonsterDefinition(monster.typeId, state.config).name}, ${monster.faction === 'player' ? 'Ally' : 'Enemy'}, tier ${monster.tier}, HP ${monster.hp} of ${monster.maxHp}, attack ${monster.atk}`
-        : 'Empty'"
+      :aria-label="getCellLabel(monster)"
       @animationend="onAnimationEnd($event, monster)"
       @click="pickCell(index)"
       @keydown.enter.space.prevent="pickCell(index)"
     >
-      <MonsterField v-if="monster" :monster="monster" :config="state.config" />
+      <GameRock v-if="monster && isObstacle(monster)" :rock="monster" />
+      <MonsterField v-else-if="monster" :monster="monster" :config="state.config" />
       <UIcon
         v-else-if="targetableCells.has(index)"
         name="lucide:plus"
@@ -100,7 +100,9 @@
 <script setup lang="ts">
 import { getMonsterDefinition } from '~~/game/config'
 import type { GameConfig } from '~~/game/config'
+import { isFrozen } from '~~/game/freezing'
 import { getDirectionFromSwipe } from '~~/game/input'
+import { isObstacle } from '~~/game/obstacles'
 import { getSpellSprite } from '~~/game/spells'
 import { getTargetCells, isSameTarget } from '~~/game/targeting'
 import type { Target } from '~~/game/targeting'
@@ -178,6 +180,17 @@ const previewCells = computed(() => {
 
 function getCellIndices(targets: readonly Target[] = []): number[] {
   return targets.flatMap(target => target.shape === 'cell' ? [target.index] : [])
+}
+
+function getCellLabel(monster: Readonly<Monster> | null): string {
+  if (!monster) return 'Empty'
+  if (isObstacle(monster)) return `Rock, breaks after ${monster.hp} more ${monster.hp === 1 ? 'hit' : 'hits'}`
+
+  const name = getMonsterDefinition(monster.typeId, props.state.config).name
+  const side = monster.faction === 'player' ? 'Ally' : 'Enemy'
+  const frozen = isFrozen(monster) ? `, frozen for ${monster.frozenTurns} more ${monster.frozenTurns === 1 ? 'turn' : 'turns'}` : ''
+
+  return `${name}, ${side}, tier ${monster.tier}, HP ${monster.hp} of ${monster.maxHp}, attack ${monster.atk}${frozen}`
 }
 
 function getGridArea(index: number): string {
@@ -320,6 +333,11 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
 .board-cell--enemy {
   border-color: color-mix(in srgb, var(--ui-color-warning-500) 42%, var(--ui-border));
   background: var(--game-enemy-bg);
+}
+
+.board-cell--obstacle {
+  border-style: dashed;
+  background: var(--ui-bg-muted);
 }
 
 .board-cell--spawned {

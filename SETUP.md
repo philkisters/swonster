@@ -15,6 +15,15 @@ Start the development server:
 pnpm dev
 ```
 
+### Cheat menu
+
+For local testing, set `NUXT_PUBLIC_CHEATS=true` in `.env` and restart
+`pnpm dev`. A cheat menu then appears below the spells: it adds gold, offers any
+spell for purchase, and raises or lowers the level of monsters on the board.
+While the switch is on, games are not saved to Firebase at all, so they never
+appear in the history or highscores. The switch only works in the dev server;
+builds ignore it.
+
 ## Firebase game tracking
 
 Create a Firebase web app, enable **Anonymous** sign-in in Firebase

@@ -1,3 +1,4 @@
+import { isObstacle } from './obstacles'
 import type { GameState, Monster } from './types'
 
 export type TargetKind = 'ownMonster' | 'enemyMonster' | 'anyMonster' | 'freeCell' | 'enemyLine'
@@ -46,7 +47,7 @@ function getLines(board: TargetBoard): Target[] {
 
 function matchesStep(step: TargetStep, monster: Monster | null, picked: Monster[]): boolean {
   if (step.kind === 'freeCell') return monster === null
-  if (!monster) return false
+  if (!monster || isObstacle(monster)) return false
   if (step.kind === 'ownMonster' && monster.faction !== 'player') return false
   if (step.kind === 'enemyMonster' && monster.faction !== 'enemy') return false
 

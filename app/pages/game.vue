@@ -47,10 +47,10 @@
             :state="state"
             :attack-animations="attackAnimations"
             :merge-animations="mergeAnimations"
-            :targeting="targeting"
+            :targeting="levelTargeting ?? targeting"
             :spell-effect="spellEffect"
             :health-popups="healthPopups"
-            @pick="pickTarget"
+            @pick="pickOnBoard"
             @spell-effect-done="finishSpellEffect"
             @health-popup-done="finishHealthPopup"
             @merge-animations-done="finishMergeAnimations"
@@ -95,8 +95,17 @@
           :cards="spellCards"
           :targeting="targeting"
           :disabled="showTutorial || state.gameOver || !!trackingError"
-          @select="selectSpell"
+          @select="selectSpellCard"
           @cancel="cancelSpell"
+        />
+        <LazyGameCheatMenu
+          v-if="cheatsEnabled"
+          :level-tool="levelTool"
+          :cost-modifier="state.config?.spellCostModifier"
+          :disabled="showTutorial || state.gameOver"
+          @gold="giveGold"
+          @spell="giveSpell"
+          @level-tool="pickLevelTool"
         />
         <section
           v-if="!state.gameOver && state.cells.every(monster => monster !== null)"
@@ -124,8 +133,11 @@
 </template>
 
 <script setup lang="ts">
+import type { Target } from '../../game/targeting'
 import type { Direction, GameState, SpawnEntry } from '../../game/types'
 import type { AvailableConfig } from '../../game/configValidation'
+import { areCheatsEnabled } from '~/composables/useCheats'
+import type { LevelTool } from '~/composables/useCheats'
 import { ArchivedConfigError, MissingConfigError } from '~/composables/useGameTracking'
 
 const showTutorial = ref(true)
@@ -142,7 +154,7 @@ const {
   end,
   loadConfig,
   loadActiveGame,
-} = useGameTracking()
+} = useGameTracking({ saveGames: !areCheatsEnabled() })
 
 const {
   state,
@@ -154,6 +166,7 @@ const {
   isAnimating,
   move,
   cast,
+  patch,
   restart,
   restore,
   finishMergeAnimations,
@@ -171,19 +184,53 @@ const {
   cancel: cancelSpell
 } = useSpellCasting(state, isAnimating, cast)
 
+const {
+  enabled: cheatsEnabled,
+  levelTool,
+  levelTargeting,
+  giveGold,
+  giveSpell,
+  toggleLevelTool,
+  stopLevelTool,
+  changeLevel
+} = useCheats(state, patch)
+
 watch(trackingError, (message) => {
   if (message) cancelSpell()
 })
 
 function moveWhenReady(direction: Direction) {
-  if (gameReady.value && !trackingError.value && !showTutorial.value && !targeting.value) move(direction)
+  if (gameReady.value && !trackingError.value && !showTutorial.value && !targeting.value && !levelTool.value) move(direction)
+}
+
+function pickOnBoard(target: Target) {
+  if (levelTool.value) {
+    changeLevel(target)
+  } else {
+    pickTarget(target)
+  }
+}
+
+function selectSpellCard(slot: number) {
+  stopLevelTool()
+  selectSpell(slot)
+}
+
+function pickLevelTool(tool: LevelTool) {
+  cancelSpell()
+  toggleLevelTool(tool)
+}
+
+function cancelTargeting() {
+  cancelSpell()
+  stopLevelTool()
 }
 
 async function restartGame() {
   try {
     if (selectedConfig) selectedConfig = await loadConfig(selectedConfig.id)
     await end()
-    cancelSpell()
+    cancelTargeting()
     const seed = restart()
     if (selectedConfig) await begin(seed, selectedConfig, state.value, spawnHistory.value)
   } catch (cause) {
@@ -254,7 +301,7 @@ onMounted(async () => {
 })
 const router = useRouter()
 const route = useRoute()
-useGameInput(moveWhenReady, cancelSpell)
+useGameInput(moveWhenReady, cancelTargeting)
 </script>
 
 <style>

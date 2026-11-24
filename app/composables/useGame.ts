@@ -182,6 +182,13 @@ export function useGame(onAction?: (action: GameAction, state: GameState, histor
     state.value = result.state
   }
 
+  /** Replaces the state outside the rules, for development cheats. Ignored while a turn is animating. */
+  function patch(change: (state: GameState) => GameState) {
+    if (isAnimating.value) return
+
+    state.value = change(state.value)
+  }
+
   function finishSpellEffect() {
     spellEffect.value = null
   }
@@ -259,6 +266,7 @@ export function useGame(onAction?: (action: GameAction, state: GameState, histor
     isAnimating: readonly(isAnimating),
     move,
     cast,
+    patch,
     restart,
     restore,
     finishMergeAnimations,

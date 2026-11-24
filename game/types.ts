@@ -2,7 +2,7 @@ import type { GameConfig } from './config'
 import type { SPELL_IDS } from './configValidation'
 
 export type Direction = 'up' | 'down' | 'left' | 'right'
-export type Faction = 'player' | 'enemy'
+export type Faction = 'player' | 'enemy' | 'neutral'
 export type SpawnKind = 'friend' | 'enemy' | 'boss'
 export type GameOverReason = 'board-full' | 'no-friendly-monsters'
 export type SpellId = typeof SPELL_IDS[number]
@@ -17,6 +17,8 @@ export interface Monster {
   atk: number
   movable: boolean
   isBoss?: boolean
+  /** Turns the monster stays frozen in place; absent when it is not frozen. */
+  frozenTurns?: number
 }
 
 export interface SpawnEntry {

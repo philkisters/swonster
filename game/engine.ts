@@ -1,5 +1,6 @@
 import { DEFAULT_GAME_CONFIG } from './config'
 import { resolveCombat } from './combat'
+import { thawCells } from './freezing'
 import { slideAndMerge } from './movement'
 import { spawnNextMonster } from './spawning'
 import { refillSpellSlot } from './spellSlots'
@@ -44,7 +45,7 @@ export function executeTurn(state: GameState, direction: Direction): TurnResult 
   }
   const nextState: GameState = {
     ...stateAfterMovement,
-    cells: combat.cells,
+    cells: thawCells(combat.cells),
     score: stateAfterMovement.score + combat.enemyDefeatScore,
     gold: state.gold + config.enemyDefeatReward.gold * rewards,
     xp: state.xp + config.enemyDefeatReward.xp * rewards

@@ -65,7 +65,11 @@ export interface SavedGame {
   usesArchivedConfig: boolean
 }
 
-export function useGameTracking() {
+/**
+ * Connects to Firebase for player profiles, configurations, scores and saved games.
+ * With `saveGames: false` it never writes game data: no game is started, updated or ended in Firestore.
+ */
+export function useGameTracking({ saveGames = true }: { saveGames?: boolean } = {}) {
   const config = useRuntimeConfig().public
   const username = ref('')
   const savedUsername = ref('')
@@ -273,6 +277,7 @@ export function useGameTracking() {
   }
 
   async function begin(initialSeed: number, config: AvailableConfig, state: unknown, history: readonly SpawnEntry[]) {
+    if (!saveGames) return
     if (!database || !playerId || !ready.value) throw new Error('Connect to Firebase before starting a game.')
     await end()
     const firestore = database
@@ -319,7 +324,7 @@ export function useGameTracking() {
   }
 
   function record(action: GameAction, state: GameState, history: SpawnEntry[]) {
-    if (!database || !playerId || !session || session.ended || writeFailure) return
+    if (!saveGames || !database || !playerId || !session || session.ended || writeFailure) return
     const firestore = database
     const current = session
     const player = doc(firestore, 'players', playerId)

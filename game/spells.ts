@@ -5,6 +5,8 @@ import {
   getMonsterStats,
   getMonsterTypeIds
 } from './config'
+import { FREEZE_TURNS, freezeMonster, isFrozen } from './freezing'
+import { createRock, isObstacle, ROCK_HITS } from './obstacles'
 import { getTargetCells, isValidSelection } from './targeting'
 import type { Target, TargetStep } from './targeting'
 import type { GameState, Monster, SpellId } from './types'
@@ -76,6 +78,14 @@ function heal(state: GameState, target: Target): GameState {
 
 function evolve(state: GameState, target: Target): GameState {
   return withCells(state, [target.index, raiseTier(monsterAt(state, target), state)])
+}
+
+function placeRock(state: GameState, target: Target): GameState {
+  return withCells(state, [target.index, createRock(`rock-${state.turn}-${target.index}`)])
+}
+
+function freeze(state: GameState, target: Target): GameState {
+  return withCells(state, [target.index, freezeMonster(monsterAt(state, target))])
 }
 
 export const SPELLS: Record<SpellId, SpellDefinition> = {
@@ -179,6 +189,24 @@ export const SPELLS: Record<SpellId, SpellDefinition> = {
     cost: 50,
     targets: [{ kind: 'ownMonster', prompt: 'Pick one of your monsters to evolve' }],
     cast: evolve
+  },
+  rock: {
+    name: 'Rock',
+    description: `Places a rock on a free cell. It never moves and blocks the way until monsters have been swiped against it ${ROCK_HITS} times.`,
+    cost: 1,
+    targets: [{ kind: 'freeCell', prompt: 'Pick a free cell for the rock' }],
+    cast: placeRock
+  },
+  freeze: {
+    name: 'Freeze',
+    description: `Freezes any monster, friend or foe, in place for ${FREEZE_TURNS} turns. It cannot slide or merge, but still fights.`,
+    cost: 5,
+    targets: [{
+      kind: 'anyMonster',
+      prompt: 'Pick a monster to freeze',
+      accepts: monster => !isFrozen(monster)
+    }],
+    cast: freeze
   }
 }
 
@@ -250,7 +278,7 @@ function damage(state: GameState, indices: number[], damage: number): GameState 
 
   for (const index of indices) {
     const monster = state.cells[index]
-    if (monster == null) continue
+    if (monster == null || isObstacle(monster)) continue
 
     if (monster.hp > damage) {
       next = withCells(next, [index, { ...monster, hp: monster.hp - damage }])

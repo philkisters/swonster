@@ -16,7 +16,8 @@ export default defineNuxtConfig({
       firebaseApiKey: '',
       firebaseAuthDomain: '',
       firebaseProjectId: '',
-      firebaseAppId: ''
+      firebaseAppId: '',
+      cheats: false
     }
   },
 

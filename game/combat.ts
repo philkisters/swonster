@@ -1,4 +1,5 @@
 import { getEnemyDefeatScore } from './config'
+import { isObstacle, OBSTACLE_HIT_DAMAGE } from './obstacles'
 import type { Direction, GameEvent, GameState, Monster } from './types'
 
 interface Attack {
@@ -43,7 +44,7 @@ function createAttacks(
 
   for (let attackerIndex = 0; attackerIndex < cells.length; attackerIndex++) {
     const attacker = cells[attackerIndex]
-    if (!attacker || attacker.hp <= 0) continue
+    if (!attacker || attacker.hp <= 0 || isObstacle(attacker)) continue
 
     const targetIndex = getAdjacentIndex(attackerIndex, direction, width, height)
     if (targetIndex === null) continue
@@ -54,7 +55,7 @@ function createAttacks(
     attacks.push({
       attackerIndex,
       targetIndex,
-      damage: attacker.atk,
+      damage: isObstacle(target) ? OBSTACLE_HIT_DAMAGE : attacker.atk,
       type
     })
   }
@@ -117,7 +118,14 @@ export function resolveCombat(state: GameState, direction: Direction): CombatRes
     state.height,
     'attack'
   )
-  const activeAttackers = new Set(activeAttacks.map(attack => attack.attackerIndex))
+  const hitsObstacle = ({ targetIndex }: Attack) => {
+    const target = state.cells[targetIndex]
+
+    return !!target && isObstacle(target)
+  }
+  const activeAttackers = new Set(
+    activeAttacks.filter(attack => !hitsObstacle(attack)).map(attack => attack.attackerIndex)
+  )
   const activeAttackByTarget = new Map(
     activeAttacks.map(attack => [attack.targetIndex, attack])
   )
@@ -127,7 +135,7 @@ export function resolveCombat(state: GameState, direction: Direction): CombatRes
 
   for (const [targetIndex, activeAttack] of activeAttackByTarget) {
     const defender = activeResult.cells[targetIndex]
-    if (!defender || activeAttack.damage <= 0 || activeAttackers.has(targetIndex)) continue
+    if (!defender || isObstacle(defender) || activeAttack.damage <= 0 || activeAttackers.has(targetIndex)) continue
 
     const counterAttacker = activeResult.cells[activeAttack.attackerIndex]
     if (!counterAttacker) continue

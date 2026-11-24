@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const SPELL_IDS = [
   'fireball', 'fireballBarrage', 'move', 'swap', 'superMove', 'superSwap',
-  'typeChange', 'fusion', 'convertEnemy', 'heal', 'evolve'
+  'typeChange', 'fusion', 'convertEnemy', 'heal', 'evolve', 'rock', 'freeze'
 ] as const
 export const spellIdSchema = z.enum(SPELL_IDS)
 
@@ -60,7 +60,7 @@ export const gameConfigSchema = z.looseObject({
   friendlyMergeScore: z.number().min(0).max(100000),
   friendlyMergeScoreMultiplier: z.number().min(1).max(10),
   enemyTierUnlockPlayerTier: z.number().int().min(1).max(100).nullish(),
-  spellSlotCount: z.number().int().min(1).max(11),
+  spellSlotCount: z.number().int().min(1).max(SPELL_IDS.length),
   spellRefillInterval: z.number().int().min(1).max(10000),
   availableSpells: z.array(spellIdSchema).readonly().default(() => [...SPELL_IDS]),
   spellCostModifier: z.number().min(0).max(100000).default(1),

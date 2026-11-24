@@ -1,10 +1,13 @@
 import { getMonsterStats } from './config'
 import type { GameConfig } from './config'
+import { isFrozen } from './freezing'
 import type { GameEvent, Monster } from './types'
 
 export function canMerge(first: Monster, second: Monster): boolean {
   return first.movable
     && second.movable
+    && !isFrozen(first)
+    && !isFrozen(second)
     && first.faction === second.faction
     && first.typeId === second.typeId
     && first.tier === second.tier

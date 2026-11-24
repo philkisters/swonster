@@ -20,6 +20,7 @@ Build a browser-based, turn-based casual puzzle game that combines 2048 sliding/
 
 - Start with a **5×5** board (prototype choice; configurable).
 - Each cell is empty or contains exactly one monster.
+- A cell can also hold an **obstacle** (currently only the rock). Obstacles are stored like monsters with the `neutral` faction: they occupy their cell for sliding, spawning and the full-board check, but belong to neither side, never attack or counter, and cannot be targeted or damaged by spells.
 - Two factions: **player** (friendly) and **enemy**.
 - Every monster has **current HP, maximum HP and attack (ATK)**. Also store unique ID, faction, monster type, merge tier, position, and movement behavior. HP and ATK are the two combat stats; other fields are identity/behavior metadata.
 - Different monster types will exist to create more complex puzzles. Movement behavior can depend on monster type: some monsters slide with swipes; others remain stationary.
@@ -79,6 +80,8 @@ Build a browser-based, turn-based casual puzzle game that combines 2048 sliding/
 - A spell can only be bought with enough gold and when a complete set of valid targets exists. Cancelling before the last target costs nothing.
 - Each spell is one function in `game/spells.ts`, registered in `SPELLS` with name, description, cost and its target steps. `game/targeting.ts` turns target steps into the options the UI highlights (cells, or rows/columns for line spells).
 - Starter spells: Fireball (damage one enemy), Fireball Barrage (lower damage to every enemy in a row or column), Move / Super Move (own / any monster to a free cell), Swap / Super Swap (two own / any two monsters), Type Change (own monster becomes the next player type, HP ratio kept), Fusion (two own monsters of the same tier, any types, become one of the next tier with the first pick's type), Convert Enemy (enemy joins the player, keeps its type), Heal (own monster to full HP), Evolve (own monster +1 tier at full HP).
+- Rock (1 gold) places a rock on a free cell. It never slides and blocks both factions. Every swipe that pushes a monster of either faction against it (the monster's next cell in swipe direction is the rock, whether or not it moved) adds one crack regardless of ATK; the fifth crack breaks it. A crack counts as a board change, so the swipe is a valid turn. Hitting a rock is not an attack: the monster can still counter in the same turn, and breaking a rock gives no reward.
+- Freeze (5 gold) freezes any monster, friend or foe, for 3 valid turns (placeholder). A frozen monster does not slide and does not merge, so it blocks like a stationary monster, but it still attacks and counters. The freeze counts down at the end of each valid turn; an already frozen monster cannot be frozen again.
 - Enemies defeated by spells grant the normal defeat rewards; Fusion grants the friendly merge score. Reaching the enemy-tier unlock level through a spell unlocks higher enemy tiers like a merge does.
 - Costs and damage values are placeholders for balancing.
 

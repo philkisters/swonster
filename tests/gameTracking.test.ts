@@ -242,6 +242,28 @@ describe('game tracking', () => {
     expect(firebase.updateDoc).not.toHaveBeenCalled()
   })
 
+  it('writes no game data when saving games is turned off', async () => {
+    const saving = useGameTracking()
+    await saving.connect()
+    await saving.begin(42, config, createInitialState(42), history)
+    const savedGame = { ...firebase.documents.get('players/abcde12345/games/new-game') }
+    firebase.batchSet.mockClear()
+    firebase.batchUpdate.mockClear()
+
+    const tracking = useGameTracking({ saveGames: false })
+    await tracking.connect()
+    const resumed = await tracking.loadActiveGame()
+    tracking.record({ type: 'move', direction: 'left' }, { ...createInitialState(42), turn: 1, score: 12, gameOver: true }, history)
+    await tracking.begin(7, config, createInitialState(7), history)
+    tracking.record({ type: 'move', direction: 'up' }, { ...createInitialState(7), turn: 1, score: 99 }, history)
+    await tracking.end()
+
+    expect(resumed?.state).toEqual(createInitialState(42))
+    expect(firebase.batchSet).not.toHaveBeenCalled()
+    expect(firebase.batchUpdate).not.toHaveBeenCalled()
+    expect(firebase.documents.get('players/abcde12345/games/new-game')).toEqual(savedGame)
+  })
+
   it('keeps an unfinished game active on exit and restores its latest state and step', async () => {
     const tracking = useGameTracking()
     await expect(tracking.begin(42, config, createInitialState(42), history)).rejects.toThrow('Connect')

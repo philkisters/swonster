@@ -1,3 +1,4 @@
+import { isFrozen } from './freezing'
 import { canMerge, mergeMonsters } from './merging'
 import { getFriendlyMergeScore } from './config'
 import type { Direction, GameEvent, GameState } from './types'
@@ -50,7 +51,7 @@ export function slideAndMerge(
 
   for (const from of getTraversalOrder(state, direction)) {
     const monster = cells[from]
-    if (!monster?.movable) continue
+    if (!monster?.movable || isFrozen(monster)) continue
 
     cells[from] = null
     let destination = from

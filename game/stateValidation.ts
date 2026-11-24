@@ -9,7 +9,7 @@ const spawnEntrySchema = z.object({
 
 const monsterSchema = z.object({
   id: z.string(),
-  faction: z.enum(['player', 'enemy']),
+  faction: z.enum(['player', 'enemy', 'neutral']),
   typeId: z.string(),
   tier: z.number().int().positive(),
   hp: z.number(),
@@ -17,6 +17,7 @@ const monsterSchema = z.object({
   atk: z.number(),
   movable: z.boolean(),
   isBoss: z.boolean().optional(),
+  frozenTurns: z.number().int().positive().optional(),
 })
 
 export const persistedGameStateSchema = z.object({

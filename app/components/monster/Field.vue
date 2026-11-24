@@ -4,6 +4,7 @@
     :class="{
       'monster-field--player': monster.faction === 'player',
       'monster-field--enemy': monster.faction === 'enemy',
+      'monster-field--frozen': isFrozen(monster),
     }"
     :style="{ '--hp-percent': `${hpPercent}%` }"
   >
@@ -16,6 +17,19 @@
       draggable="false"
     />
     <div class="monster-health-fill" aria-hidden="true" />
+    <template v-if="isFrozen(monster)">
+      <img
+        class="monster-frozen"
+        :src="withBaseURL('/sprites/effects/frozen.png')"
+        alt=""
+        aria-hidden="true"
+        draggable="false"
+      />
+      <span class="monster-frozen-turns" aria-hidden="true">
+        <UIcon name="lucide:snowflake" />
+        {{ monster.frozenTurns }}
+      </span>
+    </template>
     <span class="monster-badge monster-badge--attack">
       <UIcon
         name="game-icons:swords-emblem"
@@ -47,6 +61,7 @@
 import type { Monster } from '~~/game/types'
 import { getMonsterSprite, isMonsterSpriteMirrored } from '~~/game/config'
 import type { GameConfig } from '~~/game/config'
+import { isFrozen } from '~~/game/freezing'
 
 const { monster, config } = defineProps<{ monster: Monster, config?: GameConfig }>()
 const { app } = useRuntimeConfig()
@@ -80,6 +95,58 @@ function withBaseURL(path: string): string {
 
 .monster-sprite--mirrored {
   transform: scaleX(-1);
+}
+
+.monster-field--frozen .monster-sprite {
+  filter: saturate(0.6) brightness(1.08);
+}
+
+.monster-frozen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  animation: monster-freeze 320ms ease-out both;
+}
+
+.monster-frozen-turns {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.15rem 0.35rem 0.15rem 0.25rem;
+  border: 1px solid #1d5f9c;
+  border-radius: 999px;
+  background: #e4f7ff;
+  color: #12305a;
+  font-size: clamp(0.65rem, 1.8vw, 0.8rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@keyframes monster-freeze {
+  from {
+    opacity: 0;
+    scale: 1.15;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monster-frozen {
+    animation: none;
+  }
 }
 
 .monster-health-fill {
