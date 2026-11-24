@@ -9,6 +9,7 @@
   >
     <img
       class="monster-sprite"
+      :class="{ 'monster-sprite--mirrored': isMonsterSpriteMirrored(monster.tier) }"
       :src="withBaseURL(getMonsterSprite(monster.typeId, monster.tier, config))"
       alt=""
       aria-hidden="true"
@@ -44,7 +45,7 @@
 
 <script lang="ts" setup>
 import type { Monster } from '~~/game/types'
-import { getMonsterSprite } from '~~/game/config'
+import { getMonsterSprite, isMonsterSpriteMirrored } from '~~/game/config'
 import type { GameConfig } from '~~/game/config'
 
 const { monster, config } = defineProps<{ monster: Monster, config?: GameConfig }>()
@@ -75,6 +76,10 @@ function withBaseURL(path: string): string {
   height: 100%;
   object-fit: contain;
   pointer-events: none;
+}
+
+.monster-sprite--mirrored {
+  transform: scaleX(-1);
 }
 
 .monster-health-fill {

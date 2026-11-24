@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_GAME_CONFIG, ENEMY_TIER_PROGRESSION, ENEMY_TIER_UNLOCK_PLAYER_TIER, getMonsterHeadSprite, getMonsterSprite } from '../game/config'
+import { DEFAULT_GAME_CONFIG, ENEMY_TIER_PROGRESSION, ENEMY_TIER_UNLOCK_PLAYER_TIER, getMonsterHeadSprite, getMonsterSprite, isMonsterSpriteMirrored } from '../game/config'
 import { isGameConfig, parseAvailableConfig } from '../game/configValidation'
 import { createInitialState } from '../game/initialState'
 import { slideAndMerge } from '../game/movement'
@@ -198,6 +198,10 @@ describe('monster sprites', () => {
   it.each([0, -1, 1.5, Number.NaN])('rejects invalid level %s', (tier) => {
     expect(() => getMonsterSprite('dragon', tier)).toThrow('Invalid monster tier')
     expect(() => getMonsterHeadSprite('dragon', tier)).toThrow('Invalid monster tier')
+  })
+
+  it('mirrors the sprite of every even level', () => {
+    expect([1, 2, 3, 4, 10, 11, 12].map(isMonsterSpriteMirrored)).toEqual([false, true, false, true, true, false, true])
   })
 
   it('uses the head portrait matching the full sprite', () => {

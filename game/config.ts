@@ -137,6 +137,11 @@ export function getMonsterHeadSprite(typeId: string, tier: number, config?: Game
   return `/sprites/heads/${getMonsterSpriteFile(typeId, tier, config)}`
 }
 
+/** Whether a monster's sprite is drawn horizontally mirrored, which is the case for every even tier. */
+export function isMonsterSpriteMirrored(tier: number): boolean {
+  return tier % 2 === 0
+}
+
 export function getMonsterStats(typeId: string, tier: number, config?: GameConfig): { maxHp: number, atk: number } {
   if (!Number.isInteger(tier) || tier < 1) {
     throw new Error(`Invalid monster tier: ${tier}`)

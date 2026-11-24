@@ -20,6 +20,7 @@
         >
           <img
             class="spawn-sprite"
+            :class="{ 'spawn-sprite--mirrored': slot.isMirrored }"
             :src="slot.sprite"
             alt=""
             draggable="false"
@@ -66,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { getMonsterDefinition, getMonsterHeadSprite } from '~~/game/config'
+import { getMonsterDefinition, getMonsterHeadSprite, isMonsterSpriteMirrored } from '~~/game/config'
 import type { GameConfig } from '~~/game/config'
 import type { SpawnEntry } from '~~/game/types'
 
@@ -118,6 +119,7 @@ const slots = computed(() => {
       key: current + offset,
       tier: spawn.tier,
       isBoss: spawn.kind === 'boss',
+      isMirrored: isMonsterSpriteMirrored(spawn.tier),
       isHidden: distance > VISIBLE_DISTANCE,
       itemClass: {
         'spawn-item--past': offset < 0,
@@ -229,6 +231,10 @@ const slots = computed(() => {
   border-radius: 50%;
   object-fit: cover;
   pointer-events: none;
+}
+
+.spawn-sprite--mirrored {
+  transform: scaleX(-1);
 }
 
 .spawn-level,
