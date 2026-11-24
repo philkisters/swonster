@@ -13,7 +13,7 @@
           v-if="card"
           :key="card.spellId"
           type="button"
-          class="spell-card"
+          class="spell-card pixel-frame"
           :class="{
             'spell-card--active': targeting?.slot === slot,
             'spell-card--unavailable': card.status !== 'ready'
@@ -38,7 +38,7 @@
           >
           <span class="spell-card-name">{{ card.spell.name }}</span>
           <span
-            class="spell-cost spell-card-cost"
+            class="spell-cost spell-card-cost pixel-frame"
             :class="{ 'spell-cost--short': card.status === 'too-expensive' }"
           >
             <img
@@ -53,7 +53,7 @@
     </ul>
 
     <div
-      class="spell-detail"
+      class="spell-detail pixel-frame"
       :class="{ 'spell-detail--targeting': targeting }"
       aria-live="polite"
     >
@@ -87,7 +87,7 @@
           <button
             v-if="targeting"
             type="button"
-            class="spell-detail-cancel"
+            class="spell-detail-cancel pixel-button"
             @click="emit('cancel')"
           >
             Cancel
@@ -97,10 +97,9 @@
           v-if="targeting"
           class="spell-detail-prompt"
         >
-          <UIcon
-            name="lucide:crosshair"
+          <PixelIcon
+            name="crosshair"
             class="spell-detail-prompt-icon"
-            aria-hidden="true"
           />
           <span>{{ targeting.prompt }}</span>
           <span
@@ -210,27 +209,25 @@ function onClick(slot: number, card: SpellCard) {
 
 .spell-slot {
   height: clamp(5.25rem, 22cqi, 6.75rem);
-  border: 1px dashed var(--ui-border-accented);
-  border-radius: 0.9rem;
+  margin: var(--px);
+  outline: var(--px) dashed var(--ui-border-accented);
 }
 
 .spell-slot:has(.spell-card) {
-  border-color: transparent;
+  outline-color: transparent;
 }
 
 .spell-card {
   position: relative;
   display: flex;
-  width: calc(100% + 2px);
-  height: calc(100% + 2px);
+  width: 100%;
+  height: 100%;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.15rem;
-  margin: -1px;
   padding: 0.35rem 0.2rem 0.3rem;
-  border: 1px solid var(--ui-border-accented);
-  border-radius: inherit;
+  border: 0;
   background: var(--ui-bg-elevated);
   color: var(--ui-text-highlighted);
   cursor: pointer;
@@ -238,10 +235,7 @@ function onClick(slot: number, card: SpellCard) {
   touch-action: manipulation;
   user-select: none;
   -webkit-touch-callout: none;
-  transition:
-    translate 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: translate 0.15s ease;
 }
 
 .spell-card:disabled {
@@ -250,13 +244,13 @@ function onClick(slot: number, card: SpellCard) {
 
 .spell-card:not(:disabled):hover,
 .spell-card:focus-visible {
-  border-color: var(--game-target);
+  --frame-color: var(--game-target);
   outline: none;
 }
 
 .spell-card--active {
-  border-color: var(--game-target);
-  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--game-target) 35%, transparent);
+  --frame-color: var(--game-target);
+  --frame-extra: 0 0 0 calc(var(--px) * 2) color-mix(in srgb, var(--game-target) 35%, transparent);
   translate: 0 -0.3rem;
 }
 
@@ -280,9 +274,9 @@ function onClick(slot: number, card: SpellCard) {
   display: grid;
   min-height: 2.2em;
   place-items: center;
-  font-size: clamp(0.58rem, 2.6cqi, 0.72rem);
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: clamp(0.7rem, 3cqi, 0.85rem);
+  font-weight: 600;
+  line-height: 1;
   text-align: center;
 }
 
@@ -295,9 +289,9 @@ function onClick(slot: number, card: SpellCard) {
   align-items: center;
   gap: 0.15rem;
   color: var(--game-gold-text);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -313,11 +307,9 @@ function onClick(slot: number, card: SpellCard) {
 
 .spell-card-cost {
   position: absolute;
-  top: -0.35rem;
-  right: -0.25rem;
-  padding: 0.2rem 0.4rem 0.2rem 0.3rem;
-  border: 1px solid var(--ui-border-accented);
-  border-radius: 999px;
+  top: -0.4rem;
+  right: -0.1rem;
+  padding: 0.15rem 0.3rem;
   background: var(--ui-bg);
 }
 
@@ -327,15 +319,13 @@ function onClick(slot: number, card: SpellCard) {
   flex-direction: column;
   justify-content: center;
   gap: 0.45rem;
+  margin: var(--px);
   padding: 0.6rem 0.75rem;
-  border: 1px solid var(--ui-border-accented);
-  border-radius: 0.9rem;
   background: var(--ui-bg-elevated);
-  transition: border-color 0.15s ease;
 }
 
 .spell-detail--targeting {
-  border-color: var(--game-target);
+  --frame-color: var(--game-target);
 }
 
 .spell-detail-main {
@@ -366,16 +356,16 @@ function onClick(slot: number, card: SpellCard) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9rem;
-  font-weight: 800;
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 
 .spell-detail-description,
 .spell-detail-hint,
 .spell-detail-note {
   color: var(--ui-text-muted);
-  font-size: 0.78rem;
-  line-height: 1.35;
+  font-size: 0.9rem;
+  line-height: 1.25;
 }
 
 .spell-detail-hint,
@@ -386,7 +376,6 @@ function onClick(slot: number, card: SpellCard) {
 .spell-detail-note,
 .spell-detail-prompt {
   padding: 0.3rem 0.6rem;
-  border-radius: 0.6rem;
 }
 
 .spell-detail-prompt {
@@ -396,9 +385,9 @@ function onClick(slot: number, card: SpellCard) {
   gap: 0.4rem;
   background: color-mix(in srgb, var(--game-target) 14%, transparent);
   color: var(--game-target);
-  font-size: 0.85rem;
-  font-weight: 800;
-  line-height: 1.35;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .spell-detail-prompt-icon {
@@ -412,19 +401,8 @@ function onClick(slot: number, card: SpellCard) {
 }
 
 .spell-detail-cancel {
+  --button-color: var(--ui-bg);
   flex: 0 0 auto;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--ui-border);
-  border-radius: 0.7rem;
-  background: var(--ui-bg);
-  color: var(--ui-text);
-  font-size: 0.85rem;
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.spell-detail-cancel:hover {
-  border-color: var(--ui-border-accented);
 }
 
 @keyframes spell-card-draw {

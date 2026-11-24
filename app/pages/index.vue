@@ -53,7 +53,7 @@
               </div>
               <button
                 type="button"
-                class="game-over-restart"
+                class="pixel-button pixel-button--primary"
                 @click="restartGame"
               >
                 New game
@@ -69,7 +69,7 @@
           />
           <section
             v-if="!state.gameOver && state.cells.every(monster => monster !== null)"
-            class="game-over-card"
+            class="game-over-card pixel-frame"
             role="status"
             aria-live="polite"
           >
@@ -81,7 +81,7 @@
             </div>
             <button
               type="button"
-              class="game-over-restart"
+              class="pixel-button pixel-button--primary"
               @click="restartGame"
             >
               New game
@@ -154,9 +154,7 @@ useGameInput(moveWhenReady, cancelSpell)
   --game-target: var(--ui-text-highlighted);
   --game-damage-text: var(--ui-color-error-600);
   --game-heal-text: var(--ui-color-success-600);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
 }
 
 .dark {
@@ -184,8 +182,7 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--ui-color-primary-500) 12%, transparent), transparent 34rem),
-    radial-gradient(circle at 90% 85%, color-mix(in srgb, var(--ui-color-warning-500) 10%, transparent), transparent 30rem),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath fill='%2364748b' fill-opacity='.16' d='M0 0h3v3H0zM12 12h3v3h-3z'/%3E%3C/svg%3E"),
     var(--ui-bg);
 }
 
@@ -203,7 +200,7 @@ input {
 
 .game-shell {
   display: grid;
-  width: min(100%, 34rem);
+  width: min(100%, calc(552px + var(--px) * 2));
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(1rem, 3vw, 2rem);
 }
@@ -235,7 +232,6 @@ input {
   justify-content: center;
   gap: 0.75rem;
   padding: 1.25rem;
-  border-radius: 1.5rem;
   background: var(--ui-bg);
   inset: 0;
   text-align: center;
@@ -243,22 +239,23 @@ input {
 
 .game-over-overlay h2 {
   margin: 0;
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
-  font-weight: 850;
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 .game-over-overlay p {
   margin: 0;
   color: var(--ui-text-muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .game-over-score {
   display: flex;
   flex-direction: column;
   color: var(--game-accent-text);
-  font-size: 0.8rem;
-  font-weight: 800;
+  font-size: 0.9rem;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -266,7 +263,7 @@ input {
 .game-over-score strong {
   color: var(--ui-text-highlighted);
   font-size: clamp(2.5rem, 10vw, 4rem);
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   line-height: 1.1;
 }
 
@@ -275,38 +272,26 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.15rem;
-  border: 1px solid var(--ui-border);
-  border-radius: 1rem;
+  margin: var(--px);
+  padding: 0.85rem 1rem;
   background: var(--ui-bg-elevated);
-  box-shadow: 0 0.5rem 1.5rem rgb(40 50 32 / 5%);
 }
 
 .game-over-card h2 {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 800;
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 
 .game-over-card p {
   margin: 0.25rem 0 0;
   color: var(--ui-text-muted);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
+  line-height: 1.25;
 }
 
-.game-over-restart {
+.game-over-card .pixel-button {
   flex: 0 0 auto;
-  padding: 0.65rem 0.9rem;
-  border: 0;
-  border-radius: 0.7rem;
-  background: var(--game-accent-strong);
-  color: var(--ui-text-inverted);
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.game-over-restart:hover {
-  filter: brightness(0.9);
 }
 
 .game-help {
@@ -320,7 +305,6 @@ input {
   gap: 0.85rem;
   padding: 1rem;
   border: 1px solid var(--ui-border);
-  border-radius: 1rem;
   background: var(--ui-bg-elevated);
 }
 
@@ -330,7 +314,6 @@ input {
   height: 2rem;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 0.65rem;
   background: var(--ui-bg-muted);
   color: var(--game-accent-text);
   font-size: 1.2rem;
@@ -368,7 +351,6 @@ input {
 .legend-dot {
   width: 0.55rem;
   height: 0.55rem;
-  border-radius: 50%;
 }
 
 .legend-dot--player {
@@ -385,11 +367,6 @@ input {
 }
 
 @media (max-width: 480px) {
-  .game-tutorial-overlay,
-  .game-over-overlay {
-    border-radius: 1rem;
-  }
-
   .game-page {
     align-items: start;
     padding-top: 0.75rem;

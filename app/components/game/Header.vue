@@ -5,13 +5,13 @@
         class="game-logo"
         :src="`${app.baseURL}logo.png`"
         alt="Swonster"
-        width="80"
-        height="80"
+        width="512"
+        height="512"
       >
     </h1>
 
     <div
-      class="game-counters"
+      class="game-counters pixel-frame"
       role="group"
       aria-label="Game stats"
       aria-live="polite"
@@ -26,8 +26,8 @@
           class="game-counter-icon"
           :src="`${app.baseURL}sprites/ui/${counter.key}.png`"
           alt=""
-          width="128"
-          height="128"
+          width="192"
+          height="192"
         >
         <span class="game-counter-label">{{ counter.label }}</span>
         <span class="game-counter-value">{{ counter.value }}</span>
@@ -67,21 +67,19 @@ const counters = computed(() => [
 
 .game-logo {
   display: block;
-  width: clamp(4rem, 16vw, 5rem);
-  height: clamp(4rem, 16vw, 5rem);
-  border: 2px solid color-mix(in srgb, var(--ui-color-warning-400) 65%, var(--ui-border));
-  border-radius: 1.15rem;
-  box-shadow:
-    0 0.75rem 2rem color-mix(in srgb, var(--ui-color-primary-950) 18%, transparent),
-    0 0 0 0.25rem color-mix(in srgb, var(--ui-color-warning-500) 8%, transparent);
-  object-fit: cover;
+  width: clamp(4rem, 20vw, 6rem);
+  height: clamp(4rem, 20vw, 6rem);
+  object-fit: contain;
 }
 
 .game-counters {
   display: grid;
   min-width: 0;
-  grid-template-columns: auto auto auto;
-  gap: 0.2rem 0.5rem;
+  grid-template-columns: auto auto minmax(3ch, auto);
+  gap: 0.15rem 0.6rem;
+  margin: var(--px);
+  padding: 0.4rem 0.7rem;
+  background: var(--ui-bg-elevated);
 }
 
 .game-counter {
@@ -92,8 +90,8 @@ const counters = computed(() => [
 }
 
 .game-counter-icon {
-  width: clamp(1.35rem, 5vw, 1.6rem);
-  height: clamp(1.35rem, 5vw, 1.6rem);
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 
@@ -110,18 +108,18 @@ const counters = computed(() => [
 }
 
 .game-counter-label {
-  font-size: 0.65rem;
-  font-weight: 850;
+  font-size: 0.8rem;
+  font-weight: 700;
   letter-spacing: 0.08em;
   opacity: 0.8;
   text-transform: uppercase;
 }
 
 .game-counter-value {
-  font-size: clamp(1.05rem, 4vw, 1.3rem);
+  font-size: clamp(1.2rem, 4.5vw, 1.5rem);
   justify-self: end;
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  line-height: 1.2;
+  font-weight: 700;
+  line-height: 1.1;
 }
 </style>

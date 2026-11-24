@@ -9,10 +9,19 @@
       aria-atomic="true"
     >
       <span class="game-tutorial-progress">Step {{ tutorialStep + 1 }} of {{ tutorialSteps.length }}</span>
-      <span
+      <img
+        v-if="currentTutorialStep.sprite"
+        :key="currentTutorialStep.sprite"
         class="game-tutorial-icon"
-        aria-hidden="true"
-      >{{ currentTutorialStep.icon }}</span>
+        :src="spriteUrl(currentTutorialStep.sprite)"
+        alt=""
+        draggable="false"
+      >
+      <PixelIcon
+        v-else-if="currentTutorialStep.icon"
+        class="game-tutorial-icon"
+        :name="currentTutorialStep.icon"
+      />
       <h2 id="tutorial-title">
         {{ currentTutorialStep.title }}
       </h2>
@@ -22,7 +31,7 @@
       <button
         v-if="tutorialStep > 0"
         type="button"
-        class="game-tutorial-back"
+        class="pixel-button"
         @click="tutorialStep--"
       >
         Back
@@ -30,14 +39,14 @@
       <button
         v-else
         type="button"
-        class="game-tutorial-back"
+        class="pixel-button"
         @click="emit('close')"
       >
         Skip Tutorial
       </button>
       <button
         type="button"
-        class="game-over-restart"
+        class="pixel-button pixel-button--primary"
         @click="advanceTutorial"
       >
         {{ tutorialStep < tutorialSteps.length - 1 ? 'Next' : 'I understand' }}
@@ -47,47 +56,56 @@
 </template>
 
 <script lang="ts" setup>
+import type { PixelIconName } from '~/components/PixelIcon.vue'
+
+interface TutorialStep {
+  title: string
+  description: string
+  sprite?: string
+  icon?: PixelIconName
+}
 
 const emit = defineEmits(['close'])
+const spriteUrl = useSpriteUrl()
 
-const tutorialSteps = [
+const tutorialSteps: TutorialStep[] = [
   {
-    icon: '💡',
+    sprite: '/logo.png',
     title: 'Welcome to Swonster',
     description: 'Fight the yellow monsters on the board.'
   },
   {
-    icon: '⏳',
+    sprite: '/sprites/ui/turn.png',
     title: 'Survive each turn',
     description: 'If you lose all your monsters, or no new monster can spawn, the game ends.'
   },
   {
-    icon: '🏆',
+    sprite: '/sprites/ui/score.png',
     title: 'Highscore',
     description: 'You achieve points, by merging your monsters and defeating enemy monsters.'
   },
   {
-    icon: '↑ ↓ ← →',
+    icon: 'arrows',
     title: 'How to move',
     description: 'Use the arrow keys or WASD, or swipe on the board. All movable monsters slide in the chosen direction.'
   },
   {
-    icon: '⚔',
+    icon: 'sword',
     title: 'Attack',
     description: 'Move towards an enemy to attack. Monsters attack opposing monsters next to them in the direction of movement.'
   },
   {
-    icon: '↩',
+    icon: 'counter',
     title: 'Counterattack',
     description: 'A monster that survives an attack strikes back if it did not already attack that turn.'
   },
   {
-    icon: '● ● ●',
+    sprite: '/sprites/heads/skeleton-dragon-level-1.png',
     title: 'Upcoming spawns',
     description: 'The timeline shows the next monsters to spawn.'
   },
   {
-    icon: '✨',
+    sprite: '/sprites/spells/fireball.png',
     title: 'Spells',
     description: 'Every 5 turns a new spell card appears below the board until all slots are full. Tap a card to buy it with gold, then pick its targets. Hold a card to read what it does.'
   }
@@ -119,8 +137,6 @@ function advanceTutorial() {
   justify-content: center;
   gap: 0.65rem;
   padding: 1rem;
-  border: 1px solid var(--ui-border-accented);
-  border-radius: 1.5rem;
   background: var(--ui-bg);
   inset: 0;
   text-align: center;
@@ -134,44 +150,35 @@ function advanceTutorial() {
 
 .game-tutorial-progress {
   color: var(--ui-text-muted);
-  font-size: 0.72rem;
-  font-weight: 800;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
-.game-tutorial-icon {
+.game-tutorial-content .game-tutorial-icon {
+  width: 64px;
+  height: 64px;
   color: var(--game-accent-text);
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  object-fit: contain;
 }
 
 .game-tutorial-overlay h2 {
   margin: 0;
-  font-size: clamp(1.3rem, 4vw, 1.8rem);
-  font-weight: 850;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 .game-tutorial-overlay p {
   max-width: 22rem;
   margin: 0;
   color: var(--ui-text-muted);
-  font-size: 0.9rem;
-  line-height: 1.45;
+  font-size: 1rem;
+  line-height: 1.3;
 }
 
 .game-tutorial-actions {
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
-}
-
-.game-tutorial-back {
-  padding: 0.65rem 0.9rem;
-  border: 1px solid var(--ui-border);
-  border-radius: 0.7rem;
-  background: var(--ui-bg-elevated);
-  color: var(--ui-text);
-  font-weight: 750;
-  cursor: pointer;
+  gap: 0.75rem;
 }
 </style>

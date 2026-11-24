@@ -16,28 +16,16 @@
     />
     <div class="monster-health-fill" aria-hidden="true" />
     <span class="monster-badge monster-badge--attack">
-      <UIcon
-        name="game-icons:swords-emblem"
-        class="monster-icon bg-primary"
-        aria-hidden="true"
-      />
-      <span class="monster-tier-value pt-1.5 pl-0.5">{{ monster.atk }}</span>
+      <PixelIcon name="sword" class="monster-icon text-primary" />
+      <span class="monster-badge-value">{{ monster.atk }}</span>
     </span>
     <span class="monster-badge monster-badge--level">
-      <UIcon
-        name="game-icons:round-star"
-        class="monster-icon bg-warning"
-        aria-hidden="true"
-      />
-      <span class="monster-tier-value pt-0.5 pr-0.5 text-inverted">{{ monster.tier }}</span>
+      <PixelIcon name="star" class="monster-icon text-warning" />
+      <span class="monster-badge-value">{{ monster.tier }}</span>
     </span>
     <span class="monster-badge monster-badge--hp">
-      <UIcon
-        name="game-icons:hearts"
-        class="monster-icon bg-error"
-        aria-hidden="true"
-      />
-      <span class="monster-tier-value">{{ monster.hp }}</span>
+      <PixelIcon name="heart" class="monster-icon text-error" />
+      <span class="monster-badge-value">{{ monster.hp }}</span>
     </span>
   </div>
 </template>
@@ -63,7 +51,6 @@ function withBaseURL(path: string): string {
 .monster-field {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
 }
 
 .monster-sprite {
@@ -78,20 +65,18 @@ function withBaseURL(path: string): string {
 
 .monster-health-fill {
   position: absolute;
-  margin: 0.1rem;
   inset: 0;
   z-index: 0;
-  border-radius: inherit;
   background: linear-gradient(
     to top,
-    var(--monster-border-color) 0 var(--hp-percent),
+    var(--monster-health-color) 0 var(--hp-percent),
     transparent var(--hp-percent) 100%
   );
   pointer-events: none;
 }
 
 .monster-field--player {
-  --monster-border-color: color-mix(
+  --monster-health-color: color-mix(
     in srgb,
     var(--ui-color-primary-500) 42%,
     var(--ui-border)
@@ -99,7 +84,7 @@ function withBaseURL(path: string): string {
 }
 
 .monster-field--enemy {
-  --monster-border-color: color-mix(
+  --monster-health-color: color-mix(
     in srgb,
     var(--ui-color-warning-500) 42%,
     var(--ui-border)
@@ -107,69 +92,57 @@ function withBaseURL(path: string): string {
 }
 
 .monster-badge {
+  --badge-size: 24px;
   position: absolute;
-  display: flex;
-  width: clamp(1.8rem, 5vw, 2.2rem);
-  aspect-ratio: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(0.65rem, 1.8vw, 0.8rem);
-  font-weight: 800;
-  line-height: 1.4;
-  white-space: nowrap;
+  bottom: calc(var(--badge-size) * -0.3);
   z-index: 2;
+  display: grid;
+  width: var(--badge-size);
+  height: var(--badge-size);
+  place-items: center;
 }
 
 .monster-badge--attack {
-  bottom: -0.4rem;
-  left: -0.4rem;
+  left: calc(var(--badge-size) * -0.25);
 }
 
 .monster-badge--level {
-  bottom: -0.4rem;
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(50% - var(--badge-size) / 2);
 }
 
 .monster-badge--hp {
-  bottom: -0.4rem;
-  right: -0.4rem;
+  right: calc(var(--badge-size) * -0.25);
 }
 
-.monster-icon {
+.monster-badge .monster-icon {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 1.25rem;
-  height: 1.25rem;
-  transform: translate(-50%, -50%);
-  opacity: 0.85;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 
-.monster-tier-value {
+.monster-badge-value {
   position: relative;
-  z-index: 4;
+  color: #fff;
+  font-size: calc(var(--badge-size) * 0.55);
+  font-weight: 700;
+  line-height: 1;
+  text-shadow:
+    1px 0 0 #17171f,
+    -1px 0 0 #17171f,
+    0 1px 0 #17171f,
+    0 -1px 0 #17171f,
+    1px 1px 0 #17171f,
+    -1px 1px 0 #17171f,
+    1px -1px 0 #17171f,
+    -1px -1px 0 #17171f;
+  white-space: nowrap;
 }
 
-.monster-badge-label {
-  font-size: 0.42rem;
-  letter-spacing: 0.02em;
-}
-
-@media (min-width: 512px) {
-  .monster-icon {
-    width: 1.75rem;
-    height: 1.75rem;
-  }
-}
-
-
-@media (min-width: 768px) {
-  .monster-icon {
-    width: 2.25rem;
-    height: 2.25rem;
+@media (min-width: 640px) {
+  .monster-badge {
+    --badge-size: 36px;
   }
 }
 </style>

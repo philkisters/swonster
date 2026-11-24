@@ -1,6 +1,6 @@
 <template>
   <div
-    class="game-board"
+    class="game-board pixel-frame pixel-frame--raised"
     :class="{ 'game-board--targeting': targeting }"
     role="grid"
     :aria-label="`${state.width} by ${state.height} monster game board`"
@@ -15,7 +15,7 @@
         ? `${index}-${monster?.id}-${getAttackAnimation(monster)?.phase}-${state.turn}`
         : monster?.id === `spawn-${state.turn}` || monster?.id.startsWith(`merge-${state.turn}-`)
           ? `${index}-${monster.id}` : index"
-      class="board-cell"
+      class="board-cell pixel-frame"
       :class="{
         'board-cell--player': monster?.faction === 'player',
         'board-cell--enemy': monster?.faction === 'enemy',
@@ -42,11 +42,10 @@
       @keydown.enter.space.prevent="pickCell(index)"
     >
       <MonsterField v-if="monster" :monster="monster" />
-      <UIcon
+      <PixelIcon
         v-else-if="targetableCells.has(index)"
-        name="lucide:plus"
+        name="plus"
         class="board-cell-free"
-        aria-hidden="true"
       />
       <span
         v-if="chosenCells.has(index)"
@@ -89,10 +88,7 @@
       @blur="previewLine = null"
       @click="emit('pick', line)"
     >
-      <UIcon
-        :name="line.shape === 'row' ? 'lucide:chevrons-right' : 'lucide:chevrons-down'"
-        aria-hidden="true"
-      />
+      <PixelIcon name="chevrons" />
     </button>
   </div>
 </template>
@@ -271,19 +267,16 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
 
 <style scoped>
 .game-board {
-  --board-gap: clamp(0.35rem, 1.5vw, 0.7rem);
+  --board-gap: clamp(6px, 2vw, 12px);
   display: grid;
   grid-template-columns: repeat(var(--board-width), minmax(0, 1fr));
   grid-template-rows: repeat(var(--board-height), minmax(0, 1fr));
   gap: var(--board-gap);
   position: relative;
-  width: min(100%, 34rem);
   aspect-ratio: 1;
+  margin: var(--px);
   padding: var(--board-gap);
-  border: 1px solid var(--ui-border-accented);
-  border-radius: 1.5rem;
   background: var(--ui-bg-accented);
-  box-shadow: 0 1.5rem 4rem rgb(40 50 32 / 12%);
   touch-action: none;
   user-select: none;
 }
@@ -296,11 +289,8 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.18rem;
-  padding-bottom: 0.85rem;
+  --frame-color: var(--ui-border);
   overflow: visible;
-  border: 1px solid var(--ui-border-muted);
-  border-radius: 0.9rem;
   background: var(--ui-bg);
   color: var(--ui-text-highlighted);
 }
@@ -310,13 +300,12 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
 }
 
 .board-cell--player {
-  border-color: color-mix(in srgb, var(--ui-color-primary-500) 42%, var(--ui-border));
+  --frame-color: var(--game-accent-strong);
   background: var(--game-player-bg);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-color-primary-500) 10%, transparent);
 }
 
 .board-cell--enemy {
-  border-color: color-mix(in srgb, var(--ui-color-warning-500) 42%, var(--ui-border));
+  --frame-color: var(--game-enemy-strong);
   background: var(--game-enemy-bg);
 }
 
@@ -383,10 +372,9 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
 .board-cell--line-preview::after {
   position: absolute;
   z-index: 3;
-  border: 3px solid var(--game-target);
-  border-radius: inherit;
+  border: var(--px) solid var(--game-target);
   content: "";
-  inset: -2px;
+  inset: calc(var(--px) * -1);
   pointer-events: none;
 }
 
@@ -419,18 +407,23 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
 
 .board-cell-order {
   position: absolute;
-  top: -0.35rem;
-  left: -0.35rem;
+  top: -0.45rem;
+  left: -0.45rem;
   z-index: 4;
   display: grid;
   width: 1.4rem;
   height: 1.4rem;
   place-items: center;
-  border-radius: 50%;
   background: var(--game-target);
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--ui-bg),
+    0 var(--px) 0 0 var(--ui-bg),
+    calc(var(--px) * -1) 0 0 0 var(--ui-bg),
+    var(--px) 0 0 0 var(--ui-bg);
   color: var(--ui-bg);
-  font-size: 0.8rem;
-  font-weight: 850;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .board-spell-burst {
@@ -450,16 +443,19 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   display: grid;
   place-items: center;
   inset: 0;
-  font-size: clamp(1.15rem, 6vw, 2rem);
-  font-weight: 850;
+  font-size: clamp(1.3rem, 7vw, 2.25rem);
+  font-weight: 700;
   line-height: 1;
   pointer-events: none;
   text-shadow:
-    0 0 0.2em var(--ui-bg),
-    0.06em 0.06em 0 var(--ui-bg),
-    -0.06em 0.06em 0 var(--ui-bg),
-    0.06em -0.06em 0 var(--ui-bg),
-    -0.06em -0.06em 0 var(--ui-bg);
+    0.08em 0 0 var(--ui-bg),
+    -0.08em 0 0 var(--ui-bg),
+    0 0.08em 0 var(--ui-bg),
+    0 -0.08em 0 var(--ui-bg),
+    0.08em 0.08em 0 var(--ui-bg),
+    -0.08em 0.08em 0 var(--ui-bg),
+    0.08em -0.08em 0 var(--ui-bg),
+    -0.08em -0.08em 0 var(--ui-bg);
   animation: board-health-popup 1000ms ease-out both;
 }
 
@@ -479,14 +475,18 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   position: absolute;
   z-index: 4;
   display: grid;
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 1.75rem;
+  height: 1.75rem;
   place-items: center;
-  border: 2px solid var(--ui-bg);
-  border-radius: 50%;
+  border: 0;
   background: var(--game-target);
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--ui-bg),
+    0 var(--px) 0 0 var(--ui-bg),
+    calc(var(--px) * -1) 0 0 0 var(--ui-bg),
+    var(--px) 0 0 0 var(--ui-bg);
   color: var(--ui-bg);
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   cursor: pointer;
   transform: translate(-50%, -50%);
   animation: board-handle-pulse 1.1s ease-in-out infinite;
@@ -509,6 +509,10 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   --line-count: var(--board-width);
   top: 0;
   left: var(--line-centre);
+}
+
+.board-line-handle--column .pixel-icon {
+  rotate: 90deg;
 }
 
 @keyframes board-target-pulse {
@@ -592,16 +596,6 @@ function onAnimationEnd(event: AnimationEvent, monster: Monster | null) {
   transform: translate(-50%, 0);
   opacity: 1;
   visibility: visible;
-}
-
-@media (max-width: 480px) {
-  .game-board {
-    border-radius: 1rem;
-  }
-
-  .board-cell {
-    border-radius: 0.65rem;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "format": "eslint . --fix && prettier --write .",
     "format:check": "eslint . && prettier --check .",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "pixelate": "python3 scripts/pixelate.py"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.147",

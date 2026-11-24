@@ -58,12 +58,32 @@ pnpm build
 
 Run `pnpm format` to apply formatting.
 
+## Pixel art
+
+The game is drawn in pixel art. The painted originals live in `art/`; the
+sprites, icons and logo in `public/` are generated from them:
+
+```bash
+pnpm pixelate            # convert everything
+pnpm pixelate sprites/   # only sources whose path contains "sprites/"
+```
+
+The converter (`scripts/pixelate.py`, needs Python 3 with Pillow and NumPy)
+shrinks each image onto a small pixel grid, reduces it to a limited palette
+and writes it back enlarged with hard pixel edges. Grid size and colour count
+per group of images are set in the `JOBS` list at the top of the script. To
+add or change art, put the painted version in `art/` and run the converter;
+do not edit the generated files in `public/` by hand.
+
 ## Project structure
 
 - `app/` — Nuxt/Vue user interface, input handling, and game presentation
+- `art/` — painted source art that the pixel art is generated from
 - `game/` — pure TypeScript game rules for movement, merging, combat, and
   spawning
-- `public/` — logo, monster sprites, icons, and other static assets
+- `public/` — generated pixel-art logo, monster sprites and icons, and other
+  static assets
+- `scripts/` — the pixel-art converter
 - `tests/` — unit tests for the game engine and its rules
 
 ## Static deployment

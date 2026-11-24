@@ -1,6 +1,6 @@
 <template>
   <section
-    class="spawn-preview"
+    class="spawn-preview pixel-frame"
     aria-label="Spawn timeline"
   >
     <ol class="spawn-list">
@@ -14,7 +14,7 @@
         :aria-hidden="slot.isHidden || undefined"
       >
         <span
-          class="spawn-tile"
+          class="spawn-tile pixel-frame"
           :class="slot.tileClass"
           aria-hidden="true"
         >
@@ -24,10 +24,11 @@
             alt=""
             draggable="false"
           >
-          <span
+          <PixelIcon
             v-if="slot.isBoss"
+            name="crown"
             class="spawn-boss"
-          >♛</span>
+          />
           <span class="spawn-level">{{ slot.tier }}</span>
         </span>
       </li>
@@ -40,16 +41,16 @@
         class="spawn-turn-arrows spawn-turn-arrows--left"
         :src="`${app.baseURL}sprites/ui/turn-arrows.png`"
         alt=""
-        width="134"
-        height="64"
+        width="192"
+        height="88"
       >
       <span class="spawn-turn-counter">
         <img
           class="spawn-turn-icon"
           :src="`${app.baseURL}sprites/ui/turn.png`"
           alt=""
-          width="128"
-          height="128"
+          width="192"
+          height="192"
         >
         <span class="spawn-turn-label">Turn</span>
         <span class="spawn-turn-value">{{ turn }}</span>
@@ -58,8 +59,8 @@
         class="spawn-turn-arrows spawn-turn-arrows--right"
         :src="`${app.baseURL}sprites/ui/turn-arrows.png`"
         alt=""
-        width="134"
-        height="64"
+        width="192"
+        height="88"
       >
     </div>
   </section>
@@ -142,9 +143,9 @@ const slots = computed(() => {
 .spawn-preview {
   display: grid;
   gap: 0.6rem;
+  margin: var(--px);
   padding: 0.75rem 1rem;
-  border: 1px solid var(--ui-border);
-  border-radius: 1rem;
+  overflow-x: clip;
   background: var(--ui-bg-elevated);
   container-type: inline-size;
 }
@@ -186,23 +187,20 @@ const slots = computed(() => {
 
 .spawn-tile {
   --spawn-colour: var(--game-enemy-strong);
+  --frame-color: var(--spawn-colour);
   position: relative;
   display: grid;
   width: 100%;
   height: 100%;
   place-items: center;
-  border: 2px solid color-mix(in srgb, var(--spawn-colour) 70%, transparent);
-  border-radius: 50%;
   background: var(--game-enemy-bg);
-  transition: box-shadow 0.4s ease;
 }
 
 .spawn-tile::after {
   position: absolute;
-  border-radius: 50%;
   background: var(--ui-bg-elevated);
   content: "";
-  inset: -2px;
+  inset: calc(var(--px) * -1);
   opacity: 0;
   transition: opacity 0.4s ease;
 }
@@ -217,59 +215,56 @@ const slots = computed(() => {
 }
 
 .spawn-item--current .spawn-tile {
-  border-color: var(--spawn-colour);
-  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--spawn-colour) 30%, transparent);
+  --frame-extra: 0 0 0 calc(var(--px) * 2) color-mix(in srgb, var(--spawn-colour) 35%, transparent);
 }
 
 .spawn-sprite {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: cover;
   pointer-events: none;
 }
 
-.spawn-level,
-.spawn-boss {
+.spawn-level {
   position: absolute;
+  right: calc(var(--px) * -2);
+  bottom: calc(var(--px) * -2);
   z-index: 1;
   min-width: 1.5em;
   padding: 0 0.3em;
-  border-radius: 999px;
   background: var(--spawn-colour);
   color: var(--ui-text-inverted);
-  font-size: max(0.42rem, calc(var(--spawn-size) * 0.2));
-  font-weight: 800;
-  line-height: 1.5;
+  font-size: max(0.5rem, calc(var(--spawn-size) * 0.22));
+  font-weight: 700;
+  line-height: 1.4;
   text-align: center;
   transition:
     font-size 0.4s ease,
     background-color 0.4s ease;
 }
 
+.spawn-boss {
+  position: absolute;
+  top: calc(var(--spawn-size) * -0.2);
+  left: calc(var(--spawn-size) * -0.12);
+  z-index: 1;
+  width: calc(var(--spawn-size) * 0.45);
+  height: calc(var(--spawn-size) * 0.45);
+  color: var(--ui-color-warning-400);
+  transition:
+    width 0.4s ease,
+    height 0.4s ease;
+}
+
 .spawn-item--past .spawn-level {
   right: auto;
-  left: -0.3em;
-}
-
-.spawn-item--past .spawn-boss {
-  right: -0.3em;
-  left: auto;
-}
-
-.spawn-item--past .spawn-level,
-.spawn-item--past .spawn-boss {
+  left: calc(var(--px) * -2);
   background: color-mix(in srgb, var(--spawn-colour) 50%, var(--ui-bg-elevated));
 }
 
-.spawn-level {
-  right: -0.3em;
-  bottom: -0.3em;
-}
-
-.spawn-boss {
-  top: -0.3em;
-  left: -0.3em;
+.spawn-item--past .spawn-boss {
+  right: calc(var(--spawn-size) * -0.12);
+  left: auto;
 }
 
 .spawn-turn {
@@ -302,29 +297,28 @@ const slots = computed(() => {
 }
 
 .spawn-turn-icon {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 
 .spawn-turn-label {
-  font-size: 0.65rem;
-  font-weight: 850;
+  font-size: 0.8rem;
+  font-weight: 700;
   letter-spacing: 0.08em;
   opacity: 0.8;
   text-transform: uppercase;
 }
 
 .spawn-turn-value {
-  font-size: clamp(1.05rem, 4vw, 1.3rem);
+  font-size: clamp(1.2rem, 4.5vw, 1.5rem);
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  line-height: 1.2;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .spawn-item,
-  .spawn-tile,
   .spawn-tile::after,
   .spawn-level,
   .spawn-boss {

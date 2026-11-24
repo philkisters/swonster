@@ -2,7 +2,7 @@
 @import "@nuxt/ui";
 
 @theme static {
-  --font-sans: 'Public Sans', sans-serif;
+  --font-sans: 'Pixelify Sans', ui-monospace, monospace;
 
   --color-blue-50: #F0F6FF;
   --color-blue-100: #DBEAFE;
@@ -27,4 +27,92 @@
   --color-amber-800: #68421E;
   --color-amber-900: #57371D;
   --color-amber-950: #321D0E;
+}
+
+:root {
+  --px: 3px;
+  --game-ink: var(--ui-color-neutral-800);
+  --game-ink-soft: rgb(15 23 42 / 22%);
+}
+
+.dark {
+  --game-ink: var(--ui-color-neutral-950);
+  --game-ink-soft: rgb(0 0 0 / 40%);
+}
+
+@media (max-width: 480px) {
+  :root {
+    --px: 2px;
+  }
+}
+
+@layer components {
+  /*
+   * Pixel-art frame with notched corners, drawn outside the box with hard shadows.
+   * Leave --px of free space around the element. Set --frame-color to recolour it and
+   * --frame-extra to append further shadows.
+   */
+  .pixel-frame {
+    --frame-color: var(--game-ink);
+    --frame-extra: 0 0 0 0 transparent;
+    border-radius: 0;
+    box-shadow:
+      0 calc(var(--px) * -1) 0 0 var(--frame-color),
+      0 var(--px) 0 0 var(--frame-color),
+      calc(var(--px) * -1) 0 0 0 var(--frame-color),
+      var(--px) 0 0 0 var(--frame-color),
+      var(--frame-extra);
+  }
+
+  .pixel-frame--raised {
+    --frame-extra:
+      0 calc(var(--px) * 3) 0 0 var(--game-ink-soft),
+      calc(var(--px) * -1) calc(var(--px) * 2) 0 0 var(--game-ink-soft),
+      var(--px) calc(var(--px) * 2) 0 0 var(--game-ink-soft);
+  }
+
+  .pixel-button {
+    --button-color: var(--ui-bg-elevated);
+    margin: var(--px) var(--px) calc(var(--px) * 2);
+    padding: 0.5rem 0.85rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--button-color);
+    color: var(--ui-text-highlighted);
+    box-shadow:
+      0 calc(var(--px) * -1) 0 0 var(--game-ink),
+      0 var(--px) 0 0 var(--game-ink),
+      calc(var(--px) * -1) 0 0 0 var(--game-ink),
+      var(--px) 0 0 0 var(--game-ink),
+      0 calc(var(--px) * 2) 0 0 var(--game-ink),
+      inset 0 calc(var(--px) * -1) 0 0 rgb(0 0 0 / 22%),
+      inset 0 var(--px) 0 0 rgb(255 255 255 / 22%);
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .pixel-button:hover {
+    filter: brightness(1.08);
+  }
+
+  .pixel-button:active {
+    box-shadow:
+      0 calc(var(--px) * -1) 0 0 var(--game-ink),
+      0 var(--px) 0 0 var(--game-ink),
+      calc(var(--px) * -1) 0 0 0 var(--game-ink),
+      var(--px) 0 0 0 var(--game-ink),
+      inset 0 var(--px) 0 0 rgb(0 0 0 / 22%);
+    translate: 0 var(--px);
+  }
+
+  .pixel-button:focus-visible {
+    outline: var(--px) solid var(--game-target);
+    outline-offset: var(--px);
+  }
+
+  .pixel-button--primary {
+    --button-color: var(--game-accent-strong);
+    color: var(--ui-text-inverted);
+  }
 }
