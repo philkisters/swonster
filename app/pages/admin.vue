@@ -39,10 +39,10 @@
             <h3>Recent games (up to 25)</h3>
             <div class="admin-table">
               <table>
-                <thead><tr><th>Player</th><th>Started</th><th>Status</th><th>Turn</th><th>High score</th></tr></thead>
+                <thead><tr><th>Player</th><th>Configuration</th><th>Started</th><th>Status</th><th>Turn</th><th>High score</th></tr></thead>
                 <tbody>
                   <tr v-for="game in dashboard.games" :key="game.path">
-                    <td>{{ game.username }}</td><td>{{ formatDate(game.startTime) }}</td>
+                    <td>{{ game.username }}</td><td>{{ game.configName }}</td><td>{{ formatDate(game.startTime) }}</td>
                     <td>{{ game.status }}</td><td>{{ game.turn }}</td><td>{{ game.highScore }}</td>
                   </tr>
                 </tbody>
@@ -111,7 +111,7 @@ import type { GameConfig } from '~~/game/configValidation'
 interface Dashboard {
   playerCount: number
   gameCount: number
-  games: { path: string, username: string, startTime: number, status: string, turn: number | string, highScore: number | string }[]
+  games: { path: string, username: string, configName: string, startTime: number, status: string, turn: number | string, highScore: number | string }[]
   players: { id: string, username: string }[]
   configs: { id: string, name: string, archived: boolean, rules: GameConfig }[]
 }
@@ -251,6 +251,11 @@ async function loadDashboard() {
       getDocs(collection(database, 'configs'))
     ])
     if (version !== authVersion) return
+    const publishedConfigs = configs.docs.map((entry) => {
+      const config = parseAvailableConfig(entry.id, entry.data())
+      return { id: config.id, name: config.name, archived: config.archived === true, rules: config.rules }
+    }).sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+    const configNames = new Map(publishedConfigs.map(config => [config.id, config.name]))
     dashboard.value = {
       playerCount: playerCount.data().count,
       gameCount: gameCount.data().count,
@@ -259,6 +264,9 @@ async function loadDashboard() {
         return {
           path: entry.ref.path,
           username: typeof data.username === 'string' ? data.username : 'Unknown',
+          configName: typeof data.configId === 'string' && data.configId
+            ? configNames.get(data.configId) ?? `Unknown (${data.configId})`
+            : 'Unknown',
           startTime: typeof data.startTime === 'number' ? data.startTime : 0,
           status: typeof data.status === 'string' ? data.status : 'Unknown',
           turn: typeof data.turn === 'number' ? data.turn : '—',
@@ -269,10 +277,7 @@ async function loadDashboard() {
         id: entry.id,
         username: typeof entry.data().username === 'string' ? entry.data().username : 'Unknown'
       })),
-      configs: configs.docs.map((entry) => {
-        const config = parseAvailableConfig(entry.id, entry.data())
-        return { id: config.id, name: config.name, archived: config.archived === true, rules: config.rules }
-      }).sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+      configs: publishedConfigs
     }
   } catch (cause) {
     if (version === authVersion) showError(`Could not load analytics: ${message(cause)}`)
